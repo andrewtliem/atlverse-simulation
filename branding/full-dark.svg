@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 72">
+<title>Atlverse Simulation</title>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="5.5" transform="translate(0 4)">
+<path d="M7 49 L23 15 Q24.5 12 27.5 12 H28.5 Q31.5 12 33 15 L45 41 Q46.5 44 49.5 44 H50 L57 30" stroke="#ffffff" transform="translate(0 -7.5)"/>
+<path d="M7 49 L23 15 Q24.5 12 27.5 12 H28.5 Q31.5 12 33 15 L45 41 Q46.5 44 49.5 44 H50 L57 30" stroke="#ffc800"/>
+<path d="M7 49 L23 15 Q24.5 12 27.5 12 H28.5 Q31.5 12 33 15 L45 41 Q46.5 44 49.5 44 H50 L57 30" stroke="#6cc4ff" transform="translate(0 7.5)"/>
+</g>
+<text x="72" y="40" font-family="Montserrat, 'Segoe UI', Arial, sans-serif" font-weight="800" font-size="34" fill="#f6f1e7" letter-spacing="1">ATLVERSE</text>
+<text x="74" y="62" font-family="Montserrat, 'Segoe UI', Arial, sans-serif" font-weight="600" font-size="15" fill="#6cc4ff" letter-spacing="6.3">SIMULATION</text>
+</svg>

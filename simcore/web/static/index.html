@@ -1,0 +1,2303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atlverse Simulation</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='4' width='6' height='8' rx='1' fill='%232563eb'/%3E%3Crect x='9' y='4' width='6' height='8' rx='1' fill='%230e9f6e'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #1d2330; --muted: #667085; --line: #d5d9e0; --grid: #e7eaef;
+  --accent: #2563eb; --accent-ink: #ffffff; --node: #ffffff; --node-line: #9aa4b2; --sel: #2563eb;
+  --create: #0e9f6e; --process: #2563eb; --decide: #c27803; --assign: #7e3af2; --batch: #0694a2;
+  --record: #6b7280; --dispose: #e02424; --hold: #d03801; --transfer: #9061f9;
+  --idle: #0e9f6e; --busy: #e02424; --off: #9aa4b2; --entity: #f59e0b; --err: #e02424; --warn: #c27803;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151c; --panel: #1b2029; --ink: #e6e9ef; --muted: #98a2b3; --line: #2e3542; --grid: #1a1f28;
+    --node: #222834; --node-line: #4b5565; --accent: #3b82f6;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151c; --panel: #1b2029; --ink: #e6e9ef; --muted: #98a2b3; --line: #2e3542; --grid: #1a1f28;
+  --node: #222834; --node-line: #4b5565; --accent: #3b82f6;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+header { display: flex; gap: 6px; align-items: center; padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+header h1 { font-size: 16px; margin: 0 4px 0 0; padding-right: 10px; border-right: 1px solid var(--line); }
+.hspace { flex: 1; }
+#menubar { display: flex; gap: 0; }
+.menu { position: relative; }
+.mtop { border: 0; background: none; padding: 5px 9px; font-weight: 500; }
+.mtop:hover, .mtop[aria-expanded="true"] { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+.mlist { position: absolute; top: calc(100% + 4px); left: 0; min-width: 230px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.16); padding: 4px; z-index: 30; display: flex; flex-direction: column; }
+.mlist[hidden] { display: none; }
+.mlist button { border: 0; background: none; text-align: left; padding: 6px 10px; border-radius: 5px; display: flex; gap: 16px; justify-content: space-between; align-items: center; white-space: nowrap; }
+.mlist button:hover:not(:disabled), .mlist button:focus-visible { background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+.mlist kbd { font: 11px ui-monospace, monospace; color: var(--muted); border: 0; background: none; padding: 0; }
+.mlist hr { border: 0; border-top: 1px solid var(--line); margin: 4px 2px; width: auto; }
+.mlist .mhead { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 6px 10px 2px; }
+#doc { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1 1 auto; padding-left: 10px; border-left: 1px solid var(--line); }
+@media (min-width: 900px) { header { flex-wrap: nowrap; } header > * { flex-shrink: 0; } header > #doc { flex-shrink: 1; } }
+#doc #mname { border: 1px solid transparent; background: none; font-weight: 600; font-size: 14px; field-sizing: content; width: auto; min-width: 70px; max-width: 220px; flex: 0 1 auto; padding: 3px 6px; }
+#doc #mname:hover, #doc #mname:focus { border-color: var(--line); background: var(--panel); }
+#savestate { font-size: 12px; white-space: nowrap; }
+#savestate.unsaved { color: #b45309; }
+#helpbar { display: inline-flex; gap: 4px; align-items: center; padding-left: 8px; border-left: 1px solid var(--line); }
+.openlist { display: flex; flex-direction: column; max-height: 50vh; overflow: auto; margin: 8px 0; border: 1px solid var(--line); border-radius: 6px; }
+.openlist button { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; text-align: left; padding: 8px 10px; background: none; }
+.openlist button:last-child { border-bottom: 0; }
+.openlist button:hover { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+.brand { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-weight: 600; }
+.brand b { color: #0072ce; font-weight: 600; }
+:root[data-theme="dark"] .brand b { color: #4ea3ff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand b { color: #4ea3ff; } }
+.brand .mark { width: 22px; height: 22px; flex: none; }
+:root[data-theme="dark"] .brand .mark { content: url(icon.svg); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand .mark { content: url(icon.svg); } }
+header { border-top: 3px solid #ffc800; }
+button, select, input, textarea { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
+button { cursor: pointer; white-space: nowrap; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+.dirty::after { content: " •"; color: var(--warn); }
+main { flex: 1; display: grid; grid-template-columns: 196px 1fr 320px; min-height: 0; }
+#palette, #side { background: var(--panel); padding: 8px 10px; overflow: auto; }
+#palette { border-right: 1px solid var(--line); }
+#side { border-left: 1px solid var(--line); }
+h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 12px 0 6px; }
+/* Project Bar: panels like Arena's (Basic Process, Advanced Process, ..., Reports, Navigate) */
+.pbpanel { border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; overflow: hidden; }
+.pbhead { width: 100%; text-align: left; border: 0; border-radius: 0; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); font-weight: 600; font-size: 12.5px; padding: 5px 8px; }
+.pbhead::before { content: "▾ "; color: var(--muted); } .pbhead[aria-expanded="false"]::before { content: "▸ "; }
+.pbbody { padding: 6px; } .pbbody[hidden] { display: none; }
+.pbgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.pbsep { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 8px 0 3px; }
+.pal { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px 4px; border: 1px solid transparent; border-radius: 6px; cursor: grab; user-select: none; font-size: 11.5px; text-align: center; line-height: 1.15; background: transparent; color: var(--ink); }
+.pal:hover { border-color: var(--line); background: var(--node); }
+.pal.armed, .pal.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+.pal svg { width: 34px; height: 22px; flex: none; }
+.pal.data { cursor: pointer; }
+.pbreports button { display: block; width: 100%; text-align: left; margin-bottom: 3px; font-size: 12.5px; }
+.pbnav button { display: block; width: 100%; text-align: left; margin-bottom: 2px; font-size: 12.5px; border-color: transparent; }
+.pbnav button.on { font-weight: 600; border-color: var(--accent); }
+#thumb { width: 100%; height: 96px; display: block; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; margin-top: 6px; cursor: pointer; }
+#thumb rect.tn { fill: var(--node-line); } #thumb rect.tv { fill: color-mix(in srgb, var(--accent) 15%, transparent); stroke: var(--accent); }
+.portcount { font-size: 10px; font-weight: 600; fill: var(--accent); }
+/* spreadsheet view */
+.sheet { border-collapse: collapse; font-size: 12px; min-width: 100%; }
+.sheet th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 500; text-align: left; padding: 3px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.sheet td { padding: 1px 2px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+.sheet td.na { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--grid) 4px 5px); }
+.sheet td input:not([type=checkbox]), .sheet td select, .sheet td textarea { width: 100%; min-width: 80px; padding: 2px 4px; font-size: 12px; }
+.sheet td textarea { min-height: 24px; height: 24px; font-family: ui-monospace, monospace; }
+.sheet td .rows { padding: 1px 6px; font-size: 12px; }
+.sheet tr.cur td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.sheet td.idx { color: var(--muted); text-align: right; padding-right: 6px; }
+.sheethead { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; flex-wrap: wrap; }
+.sheethead b { font-size: 13px; }
+.addrowline { color: var(--muted); font-style: italic; cursor: pointer; padding: 4px; border: 1px dashed var(--line); border-radius: 4px; margin-top: 4px; }
+.addrowline:hover { color: var(--accent); border-color: var(--accent); }
+#stage { position: relative; overflow: hidden; background: var(--bg); touch-action: none; }
+#stage.placing { cursor: copy; }
+svg#canvas { width: 100%; height: 100%; display: block; }
+#zoombar { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 4px; }
+#zoombar button { padding: 3px 9px; }
+#zoombar #bauto[aria-pressed="false"] { opacity: .6; text-decoration: line-through; }
+#crumbs { position: absolute; left: 10px; top: 10px; display: none; gap: 4px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; color: var(--muted); max-width: calc(100% - 20px); flex-wrap: wrap; }
+#crumbs button { padding: 1px 8px; } #crumbs button:disabled { opacity: 1; font-weight: 600; border-color: transparent; }
+.node rect.body { fill: var(--node); stroke: var(--node-line); stroke-width: 1.5; }
+.node.selected rect.body { stroke: var(--sel); stroke-width: 2.5; }
+.node.problem rect.body { stroke: var(--err); stroke-dasharray: 5 3; }
+.node text { fill: var(--ink); font-size: 12px; pointer-events: none; }
+.node text.kind { fill: var(--muted); font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em; }
+.node text.sub { fill: var(--muted); font-size: 10.5px; }
+.port { fill: var(--panel); stroke: var(--node-line); stroke-width: 1.5; cursor: crosshair; }
+.port:hover { fill: var(--accent); stroke: var(--accent); }
+.link { fill: none; stroke: var(--node-line); stroke-width: 1.8; }
+.link.selected { stroke: var(--sel); stroke-width: 3; }
+#ghost { pointer-events: none; }
+#band { fill: color-mix(in srgb, var(--accent) 12%, transparent); stroke: var(--accent); stroke-dasharray: 4 3; pointer-events: none; }
+.portlabel { fill: var(--muted); font-size: 9px; }
+.badge { font-size: 11px; font-weight: 600; fill: var(--ink); }
+.ent { stroke: rgba(0,0,0,.35); stroke-width: .8; }
+label { display: block; font-size: 12px; color: var(--muted); margin: 7px 0 2px; }
+#side input:not([type=checkbox]), #side select, #side textarea { width: 100%; }
+#side textarea { min-height: 64px; font-family: ui-monospace, monospace; font-size: 12px; }
+.hint { color: var(--muted); font-size: 12px; }
+.row { display: flex; gap: 6px; } .row > * { flex: 1; min-width: 0; }
+#sidetabs { display: flex; gap: 4px; margin-bottom: 6px; position: sticky; top: -8px; background: var(--panel); padding: 6px 0; z-index: 1; }
+#sidetabs button.on, #tabs button.on { border-color: var(--accent); color: var(--accent); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 4px; }
+.tbl th { text-align: left; color: var(--muted); font-weight: 500; padding: 2px 3px; }
+.tbl td { padding: 1px 2px; vertical-align: top; }
+.tbl td input, .tbl td select, .tbl td textarea { width: 100%; padding: 3px 5px; font-size: 12px; }
+.tbl td textarea { min-height: 28px; font-family: ui-monospace, monospace; }
+.tbl button.x { padding: 1px 6px; color: var(--muted); }
+details.data { border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; }
+.card { border: 1px solid var(--line); border-radius: 6px; padding: 6px; margin: 6px 0; background: var(--bg); }
+.card .top { display: flex; gap: 4px; }
+.card .top input { flex: 1; font-weight: 600; }
+.card .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
+.card .grid .wide { grid-column: 1 / -1; }
+.card .grid label { margin: 4px 0 1px; }
+.card .grid input, .card .grid select, .card .grid textarea { width: 100%; padding: 3px 6px; font-size: 12.5px; }
+.card .grid input[type=color] { padding: 1px; height: 28px; }
+.card .grid input[type=checkbox] { width: auto; }
+.card button.x { padding: 1px 8px; color: var(--muted); }
+details.data summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+input.expr { font-family: ui-monospace, monospace; font-size: 12.5px; }
+label.chk { display: flex; gap: 6px; align-items: center; color: var(--ink); margin: 8px 0 2px; cursor: pointer; }
+label.chk input { width: auto !important; margin: 0; }
+.rep { margin: 10px 0 4px; }
+.rephead { font-size: 12px; color: var(--muted); font-weight: 600; }
+.rep .card { margin: 5px 0; }
+.rep .card .top { align-items: center; }
+.rtitle { flex: 1; min-width: 0; font: 600 12px ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.addrow { margin-top: 2px; font-size: 12.5px; }
+.card .grid .fld.wide, .card .grid .rep { grid-column: 1 / -1; }
+.card .grid label.chk { margin: 6px 0 0; }
+.colorrow { display: flex; gap: 4px; } .colorrow input { flex: 1; }
+.perr { color: var(--err); font-size: 12px; margin: 6px 0; }
+details.data .hint { margin: 2px 0 6px; }
+#bottom { height: 0; background: var(--panel); border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+#bottom.open { height: 40vh; }
+#tabs { display: flex; gap: 4px; padding: 5px 8px; border-bottom: 1px solid var(--line); align-items: center; flex-wrap: wrap; }
+#panes { flex: 1; overflow: auto; }
+#panes > div { display: none; padding: 8px 12px; }
+#panes > div.on { display: block; }
+#p-report pre { margin: 0; font: 12px/1.35 ui-monospace, monospace; white-space: pre; }
+.res { border-collapse: collapse; font-size: 12.5px; margin: 4px 0 14px; }
+.res th, .res td { padding: 3px 10px 3px 0; text-align: right; border-bottom: 1px solid var(--line); }
+.res th:first-child, .res td:first-child { text-align: left; }
+.res th { color: var(--muted); font-weight: 500; }
+.res td { font-variant-numeric: tabular-nums; }
+.prob { padding: 3px 0; cursor: pointer; } .prob b { color: var(--err); } .prob.w b { color: var(--warn); }
+#anibar { display: none; gap: 8px; align-items: center; padding: 5px 10px; background: var(--panel); border-top: 1px solid var(--line); flex-wrap: wrap; }
+#anibar.on { display: flex; }
+#clock { font: 600 13px ui-monospace, monospace; min-width: 150px; }
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 6px 14px; border-radius: 6px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 9; }
+#toast.on { opacity: .92; }
+.runbar { display: inline-flex; gap: 3px; }
+#runprog { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); width: min(420px, calc(100% - 32px)); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.18); padding: 14px 16px; z-index: 6; display: flex; flex-direction: column; gap: 8px; }
+#runprog[hidden] { display: none; }
+.rphead { display: flex; justify-content: space-between; font-size: 15px; }
+#rppct { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.rptrack { height: 10px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 12%, var(--panel)); overflow: hidden; position: relative; }
+#rpbar { height: 100%; width: 0; background: linear-gradient(90deg, #ffc800, #0072ce); border-radius: 6px; transition: width .35s; }
+.rptrack.indet #rpbar { width: 35% !important; position: absolute; animation: rpslide 1.3s ease-in-out infinite; }
+@keyframes rpslide { from { left: -35%; } to { left: 100%; } }
+.rpfoot { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+#status { max-width: 280px; min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+#savestate { flex: none; }
+@media (max-width: 1440px) { .runbar .lbl { display: none; } }   /* icons only on small screens; the titles name them */
+.runbar button { padding: 4px 7px; }
+.runbar.running #brun { opacity: .45; }
+#runstate { font-variant-numeric: tabular-nums; }
+.dlg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+.dlg[hidden] { display: none; }
+.dlgbox { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+.dlgbox h3 { margin: 0 0 8px; font-size: 16px; }
+.dlgtabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 6px; }
+.dlgtabs button.on { border-color: var(--accent); color: var(--accent); }
+#setupbody .row { margin-bottom: 2px; }
+#setupbody input:not([type=checkbox]), #setupbody select, #setupbody textarea { width: 100%; }
+#setupbody fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 10px 0 4px; padding: 4px 10px 8px; }
+#setupbody legend { font-size: 12px; color: var(--muted); }
+.dlgbox.wide { width: min(980px, 100%); }
+.gsbar { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+#gschart { width: 100%; height: 300px; display: block; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; touch-action: none; cursor: crosshair; user-select: none; }
+#gschart .bar { fill: #3b82f6; } #gschart .bar.hover { fill: #1d4ed8; }
+#gschart .past { fill: color-mix(in srgb, var(--muted) 12%, transparent); }
+#gschart text { font-size: 10px; fill: var(--muted); }
+#gschart .gl { stroke: var(--grid); } #gschart .daygl { stroke: var(--node-line); }
+#gsstatus { margin-top: 4px; min-height: 18px; font-variant-numeric: tabular-nums; }
+#gsopts { border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px 8px; margin-bottom: 6px; }
+#gsopts input, #gsopts select { width: 100%; }
+#gsopts .grid4 { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0 8px; }
+.gsfill { display: flex; gap: 6px; align-items: end; flex-wrap: wrap; margin-top: 8px; }
+.gsfill label { margin: 0 0 2px; } .gsfill input { width: 90px; }
+.schedprev { width: 100%; height: 46px; display: block; margin: 6px 0 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
+.schedprev rect { fill: #3b82f6; }
+.dlgbtns { display: flex; gap: 6px; justify-content: flex-end; margin-top: 14px; }
+kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+/* learning aids (learn.js): help drawer, term links, reading of results, charts, tutorial */
+#help { position: fixed; top: 46px; right: 0; bottom: 0; width: min(420px, 100%); background: var(--panel); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0,0,0,.12); z-index: 15; display: flex; flex-direction: column; padding: 8px 12px; }
+#help[hidden] { display: none; }
+.helphead { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+#helpq { width: 100%; margin-bottom: 6px; }
+.helpstart { margin-bottom: 4px; } .helpstart button { width: 100%; }
+#helplist { overflow: auto; flex: 1; padding-right: 4px; }
+#helplist details { border-bottom: 1px solid var(--grid); padding: 4px 0; }
+#helplist details.flash { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+#helplist summary { cursor: pointer; font-weight: 600; }
+.helpbody { font-size: 13px; padding: 4px 2px 6px; } .helpbody ul { margin: 4px 0; padding-left: 18px; }
+.helpbody code, .learn code, .tourbody code { font: 12px ui-monospace, monospace; background: var(--bg); padding: 0 3px; border-radius: 3px; }
+.term { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.term:hover, .term:focus { color: var(--accent); outline: none; }
+.qm { display: inline-block; width: 15px; height: 15px; line-height: 14px; margin-left: 5px; border-radius: 50%; border: 1px solid var(--line); color: var(--muted); font-size: 10px; text-align: center; cursor: help; vertical-align: 1px; }
+.qm:hover { color: var(--accent); border-color: var(--accent); }
+.modhelp { font-size: 12px; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; margin-bottom: 4px; }
+.learn { border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); background: color-mix(in srgb, var(--accent) 5%, var(--panel)); border-radius: 8px; padding: 6px 12px; margin: 8px 0 12px; max-width: 920px; }
+.learnhead { display: flex; align-items: center; } .learnhead b { flex: 1; }
+.learnfold { border: 0; background: transparent; padding: 0 6px; }
+.learn ul { margin: 4px 0; padding-left: 0; list-style: none; }
+.learn li { padding: 4px 0 4px 22px; position: relative; font-size: 13px; border-bottom: 1px solid var(--grid); }
+.learn li::before { position: absolute; left: 0; top: 4px; }
+.learn li.ok::before { content: "✅"; } .learn li.info::before { content: "ℹ️"; } .learn li.warn::before { content: "⚠️"; } .learn li.bad::before { content: "⛔"; }
+.learn a, .tourbody a, .helpbody a { color: var(--accent); }
+button.goto { font-size: 11px; padding: 0 6px; margin-left: 4px; }
+.chart { max-width: 620px; margin: 4px 0 8px; } .chart svg { width: 100%; height: auto; display: block; }
+.charttitle { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.chart .lab { font-size: 11px; fill: var(--ink); } .chart .val { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.chart .track { fill: var(--grid); } .chart .bar.click { cursor: pointer; } .chart .bar.click:hover .lab { fill: var(--accent); }
+table.res tr.click { cursor: pointer; } table.res tr.click:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.node.flash rect.body { stroke: var(--warn); stroke-width: 4; }
+#tour { position: fixed; left: 206px; bottom: 16px; width: min(380px, calc(100% - 32px)); max-height: 70vh; overflow: auto; background: var(--panel); border: 2px solid var(--accent); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.25); padding: 8px 14px 10px; z-index: 18; font-size: 13px; }
+#tour[hidden] { display: none; }
+#tour.up { left: auto; right: 12px; bottom: 8px; max-height: calc(40vh - 60px); }
+#tour.top { left: auto; right: 332px; bottom: auto; top: 54px; max-height: calc(60vh - 70px); }
+.tourhead { cursor: move; user-select: none; }
+.tourhead { display: flex; align-items: center; } .tourhead button { border: 0; padding: 0 4px; }
+#tour h3 { margin: 4px 0 6px; font-size: 15px; } .tourbody ul { margin: 4px 0; padding-left: 18px; }
+.tourstate { margin-top: 8px; font-size: 12.5px; color: var(--muted); } .tourstate.ok { color: var(--create); }
+#tour .dlgbtns { margin-top: 8px; }
+.tut-hl { outline: 3px solid var(--warn) !important; outline-offset: 2px; animation: tutpulse 1.2s ease-in-out infinite; }
+@keyframes tutpulse { 50% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .tut-hl { animation: none; } }
+@media (max-width: 820px) { #tour, #tour.up, #tour.top { left: 16px; right: auto; top: auto; bottom: 16px; } #help { top: 0; } }
+@media (max-width: 820px) {
+  body { height: auto; min-height: 100vh; overflow: auto; }
+  main { grid-template-columns: 1fr; grid-template-rows: auto minmax(380px, 62vh) auto; }
+  #palette { border-right: 0; border-bottom: 1px solid var(--line); max-height: 40vh; }
+  .pbgrid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+  #side { border-left: 0; border-top: 1px solid var(--line); }
+  #bottom.open { height: 55vh; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1 class="brand" title="Atlverse Simulation"><img class="mark" src="logo.svg" alt="" aria-hidden="true">Atlverse <b>Simulation</b></h1>
+  <nav id="menubar" aria-label="Menu">
+    <div class="menu" data-menu="file"><button class="mtop" id="mfile" aria-haspopup="menu" aria-expanded="false">File</button>
+      <div class="mlist" role="menu" hidden>
+        <button role="menuitem" id="bnew">New</button>
+        <button role="menuitem" id="bopen">Open…</button>
+        <button role="menuitem" id="bsave">Save<kbd>Ctrl+S</kbd></button>
+        <hr>
+        <button role="menuitem" id="mi-import">Import JSON…</button>
+        <button role="menuitem" id="mi-json">Export JSON</button>
+        <button role="menuitem" id="mi-yaml">Export YAML</button>
+      </div></div>
+    <div class="menu" data-menu="edit"><button class="mtop" id="medit" aria-haspopup="menu" aria-expanded="false">Edit</button>
+      <div class="mlist" role="menu" hidden>
+        <button role="menuitem" id="bundo">Undo<kbd>Ctrl+Z</kbd></button>
+        <button role="menuitem" id="bredo">Redo<kbd>Ctrl+Y</kbd></button>
+      </div></div>
+    <div class="menu" data-menu="tools"><button class="mtop" id="mtools" aria-haspopup="menu" aria-expanded="false">Tools</button>
+      <div class="mlist" role="menu" hidden></div></div>
+    <div class="menu" data-menu="help"><button class="mtop" id="mhelp" aria-haspopup="menu" aria-expanded="false">Help</button>
+      <div class="mlist" role="menu" hidden>
+        <button role="menuitem" id="btheme">Tema terang / gelap</button>
+      </div></div>
+  </nav>
+  <div id="doc" title="Nama model — klik untuk mengganti">
+    <span class="docicon" aria-hidden="true">📄</span><input id="mname" value="Model" aria-label="Nama model">
+    <span id="savestate" class="hint"></span><span id="status" class="hint"></span>
+  </div>
+  <span class="runbar" role="toolbar" aria-label="Run controls">
+    <button id="bsetup" title="Run > Setup: replications, run length, warm-up…">⚙ Run Setup</button>
+    <button id="brun" class="primary" title="Go (F5)">▶ Go</button>
+    <button id="bstep" title="Step: advance the animation one event (F10)">⏭ Step</button>
+    <button id="bpause" title="Pause (Esc while running)" aria-label="Pause">⏸<span class="lbl"> Pause</span></button>
+    <button id="bff" title="Fast-Forward: skip the animation to the end" aria-label="Fast-Forward">⏩<span class="lbl"> Fast-Forward</span></button>
+    <button id="bend" title="End: stop the run and return to editing (Shift+F5)" aria-label="End">■<span class="lbl"> End</span></button>
+  </span>
+  <span id="helpbar"></span>
+  <input id="fileinput" type="file" accept=".json,application/json" hidden>
+</header>
+<div id="opendlg" class="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="opentitle">
+  <div class="dlgbox"><h3 id="opentitle">Open model</h3>
+    <input id="openq" type="search" placeholder="Cari model…" aria-label="Cari model" style="width:100%;box-sizing:border-box">
+    <div id="openlist" class="openlist"></div>
+    <p class="hint">Model contoh dan model yang pernah di-Save. File .json dari teman atau dosen: File → Import JSON.</p>
+    <div class="dlgbtns"><button id="openclose">Batal</button></div></div>
+</div>
+<main>
+  <div id="palette"></div>
+  <div id="stage">
+    <svg id="canvas">
+      <defs>
+        <pattern id="gridpat" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="var(--grid)" stroke-width="1"/></pattern>
+        <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--node-line)"/></marker>
+      </defs>
+      <g id="world">
+        <rect id="gridrect" x="-5000" y="-5000" width="10000" height="10000" fill="url(#gridpat)"/>
+        <g id="links"></g><g id="nodes"></g><g id="ents"></g>
+        <path id="ghost" class="link" stroke-dasharray="4 3" d=""/>
+        <rect id="band" width="0" height="0"/>
+      </g>
+    </svg>
+    <div id="crumbs"></div>
+    <div id="runprog" hidden role="status" aria-live="polite">
+      <div class="rphead"><b>Menjalankan simulasi…</b><span id="rppct"></span></div>
+      <div class="rptrack"><div id="rpbar"></div></div>
+      <div id="rpline" class="hint"></div>
+      <div class="rpfoot"><span id="rptime" class="hint"></span><button id="rpend" title="Hentikan run (End)">■ End</button></div>
+      <div class="hint">Animasi dan laporan muncul setelah perhitungan selesai.</div>
+    </div>
+    <div id="zoombar"><button id="bauto" aria-pressed="true" title="Object > Auto-Connect: a module placed while another is selected is connected to it">⛓ Auto-Connect</button><button id="zout" title="Zoom out">−</button><button id="zfit" title="Fit model">Fit</button><button id="zin" title="Zoom in">+</button></div>
+  </div>
+  <div id="side"></div>
+</main>
+<div id="anibar">
+  <button id="arestart" title="Replay the animation from the start">⏮ Replay</button>
+  <span id="clock">t = 0</span><span id="runstate" class="hint"></span>
+  <span class="hint">Speed</span><input id="aspeed" type="range" min="0" max="100" value="50" style="width:150px">
+  <span id="aspeedv" class="hint"></span>
+  <span style="flex:1"></span>
+  <button id="aexit">Back to editing</button>
+</div>
+<div id="scheddlg" class="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="schedtitle">
+  <div class="dlgbox wide">
+    <h3 id="schedtitle">Graphical Schedule Editor</h3>
+    <div class="gsbar">
+      <button id="gsstart" title="Calendar Start">⏮</button><button id="gsback" title="Calendar Back">◀</button><button id="gsfwd" title="Calendar Forward">▶</button>
+      <span id="gsrange" class="hint"></span><span style="flex:1"></span>
+      <button id="gsoptbtn" aria-expanded="false">Options…</button><button id="gsclear">Clear</button>
+    </div>
+    <div id="gsopts" hidden></div>
+    <svg id="gschart" role="img" aria-label="Schedule chart: click or drag to set the value of each time slot"></svg>
+    <div id="gsstatus" class="hint">Click or drag on the chart to set values.</div>
+    <div class="gsfill" id="gsfill"></div>
+    <div class="dlgbtns"><button id="gsok" class="primary">OK</button><button id="gscancel">Cancel</button></div>
+  </div>
+</div>
+<div id="rowsdlg" class="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="rowstitle">
+  <div class="dlgbox"><h3 id="rowstitle"></h3><div id="rowsbody"></div><div class="dlgbtns"><button id="rowsclose" class="primary">Close</button></div></div>
+</div>
+<div id="setupdlg" class="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="setuptitle">
+  <div class="dlgbox">
+    <h3 id="setuptitle">Run Setup</h3>
+    <div class="dlgtabs" id="setuptabs"></div>
+    <div id="setupbody"></div>
+    <div class="dlgbtns"><button id="setupok" class="primary">OK</button><button id="setupcancel">Cancel</button><button id="setupapply">Apply</button></div>
+  </div>
+</div>
+<div id="bottom">
+  <div id="tabs">
+    <button data-pane="problems">Problems <span id="pcount"></span></button>
+    <button data-pane="summary">Summary</button>
+    <button data-pane="report">Report</button>
+    <button data-pane="sheet">Spreadsheet</button>
+    <span class="hint" id="rinfo"></span><span style="flex:1"></span><button id="tclose" title="Close panel">✕</button>
+  </div>
+  <div id="panes"><div id="p-problems"></div><div id="p-summary"></div><div id="p-report"><pre></pre></div><div id="p-sheet"></div></div>
+</div>
+<div id="toast"></div>
+<script>
+"use strict";
+// ======================= module catalogue (fields follow Arena's module dialogs) =======================
+const UNITS = ["Seconds", "Minutes", "Hours", "Days"];
+const SCHED_UNITS = ["Seconds", "Minutes", "Quarterhours", "Halfhours", "Hours", "Days"];
+const ALLOC = ["Value Added", "Non-Value Added", "Transfer", "Wait", "Other"];
+const PRIO = ["High (1)", "Medium (2)", "Low (3)", "Other"];
+const SELRULE = ["Cyclical", "Random", "Preferred Order", "Specific Member", "Largest Remaining Capacity", "Smallest Number Busy"];
+const QTYPE = ["Queue", "Set", "Internal", "Attribute", "Expression"];
+const OPS = [">=", ">", "==", "<>", "<", "<="];
+// Entity pictures: colour and shape used by the animation
+const PICTURES = {
+  "Picture.Report": ["#f59e0b", "rect"], "Picture.Box": ["#a16207", "rect"], "Picture.Package": ["#b45309", "rect"],
+  "Picture.Envelope": ["#94a3b8", "rect"], "Picture.Red Ball": ["#dc2626", "circle"], "Picture.Blue Ball": ["#2563eb", "circle"],
+  "Picture.Green Ball": ["#16a34a", "circle"], "Picture.Yellow Ball": ["#eab308", "circle"], "Picture.Red Page": ["#ef4444", "rect"],
+  "Picture.Blue Page": ["#3b82f6", "rect"], "Picture.Green Page": ["#22c55e", "rect"], "Picture.Yellow Page": ["#facc15", "rect"],
+  "Picture.Man": ["#0ea5e9", "diamond"], "Picture.Woman": ["#db2777", "diamond"], "Picture.Truck": ["#475569", "rect"],
+  "Picture.Airplane": ["#64748b", "diamond"],
+};
+const f = (key, label, kind, def, show, extra) => ({key, label, kind, def, show, ...extra});
+const has = (v, ...xs) => xs.includes(v);
+
+// Resource rows (Process: Resource/Set; Seize and Release add Attribute/Expression)
+const resCols = (types, release) => [
+  f("type", "Type", types, "Resource"),
+  f("resource", "Resource Name", "ref:resources", "Resource 1", r => r.type === "Resource"),
+  f("set", "Set Name", "ref:sets", "", r => r.type === "Set"),
+  f("attribute", "Attribute Name", "ref:attributes", "", r => r.type === "Attribute"),
+  f("expression", "Expression", "expr", "", r => r.type === "Expression"),
+  f("quantity", "Quantity", "expr", "1"),
+  ...(release ? [
+    f("release_rule", "Release Rule", ["Last Member Seized", "First Member Seized", "Specific Member"], "Last Member Seized", r => r.type === "Set"),
+    f("set_index", "Set Index", "expr", "1", r => r.type === "Set" && r.release_rule === "Specific Member"),
+  ] : [
+    f("rule", "Selection Rule", SELRULE, "Cyclical", r => r.type === "Set"),
+    f("save_attr", "Save Attribute", "ref:attributes", "", r => r.type === "Set" && r.rule !== "Specific Member"),
+    f("set_index", "Set Index", "expr", "1", r => r.type === "Set" && r.rule === "Specific Member"),
+  ]),
+];
+const resTitle = r => (r.type === "Resource" ? r.resource : r.type === "Set" ? `set ${r.set}` : r.type === "Attribute" ? `attr ${r.attribute}` : r.expression) + (String(r.quantity) !== "1" ? ` × ${r.quantity}` : "");
+const resources = (types, release) => f("resources", "Resources", "repeat", [{type: "Resource", resource: "Resource 1", quantity: "1"}], null,
+  {cols: resCols(types, release), title: resTitle, add: "Add resource"});
+// Decide conditions: If / Named / Row / Column / Is / Value
+const COND = [
+  f("if_type", "If", ["Variable", "Variable Array (1D)", "Variable Array (2D)", "Attribute", "Entity Type", "Expression"], "Expression"),
+  f("named", "Named", r => r.if_type.startsWith("Variable") ? "ref:variables" : r.if_type === "Attribute" ? "ref:attributes" : "ref:entities", "", r => r.if_type !== "Expression"),
+  f("row", "Row", "expr", "1", r => r.if_type.startsWith("Variable Array")),
+  f("column", "Column", "expr", "1", r => r.if_type === "Variable Array (2D)"),
+  f("is", "Is", OPS, ">=", r => !has(r.if_type, "Entity Type", "Expression")),
+  f("value", "Value", "expr", "1", r => r.if_type !== "Entity Type"),
+];
+function condTitle(r) {
+  if (r.if_type === "Expression") return r.value || "(condition)";
+  if (r.if_type === "Entity Type") return `Entity.Type == ${r.named}`;
+  const ref = r.if_type.endsWith("(1D)") ? `${r.named}(${r.row})` : r.if_type.endsWith("(2D)") ? `${r.named}(${r.row}, ${r.column})` : r.named;
+  return `${ref} ${r.is} ${r.value}`;
+}
+const QUEUE = [
+  f("queue_type", "Queue Type", QTYPE, "Queue"),
+  f("queue_name", "Queue Name", "ref:queues", "", p => p.queue_type === "Queue", {placeholder: p => `${p.name}.Queue`}),
+  f("queue_set", "Set Name", "ref:sets", "", p => p.queue_type === "Set"),
+  f("queue_set_index", "Set Index", "expr", "1", p => p.queue_type === "Set"),
+  f("queue_attribute", "Attribute", "ref:attributes", "", p => p.queue_type === "Attribute"),
+  f("queue_expression", "Expression", "expr", "", p => p.queue_type === "Expression"),
+];
+const ASSIGN = [
+  f("type", "Type", ["Variable", "Variable Array (1D)", "Variable Array (2D)", "Attribute", "Entity Type", "Entity Picture", "Other"], "Variable"),
+  f("variable", "Variable Name", "ref:variables", "Variable 1", r => r.type.startsWith("Variable")),
+  f("row", "Row", "expr", "1", r => r.type.startsWith("Variable Array")),
+  f("column", "Column", "expr", "1", r => r.type === "Variable Array (2D)"),
+  f("attribute", "Attribute Name", "ref:attributes", "Attribute 1", r => r.type === "Attribute"),
+  f("entity_type", "Entity Type", "ref:entities", "Entity 1", r => r.type === "Entity Type"),
+  f("entity_picture", "Entity Picture", "ref:pictures", "Picture.Report", r => r.type === "Entity Picture"),
+  f("other", "Other", "expr", "J", r => r.type === "Other"),
+  f("value", "New Value", "expr", "1", r => !has(r.type, "Entity Type", "Entity Picture")),
+];
+function assignTitle(r) {
+  const tgt = {Variable: r.variable, "Variable Array (1D)": `${r.variable}(${r.row})`, "Variable Array (2D)": `${r.variable}(${r.row}, ${r.column})`,
+               Attribute: r.attribute, "Entity Type": "Entity.Type", "Entity Picture": "Entity.Picture", Other: r.other}[r.type];
+  const val = r.type === "Entity Type" ? r.entity_type : r.type === "Entity Picture" ? r.entity_picture : r.value;
+  return `${tgt || "?"} = ${val ?? ""}`;
+}
+const delayText = p => ({Constant: p.value, Normal: `NORM(${p.value}, ${p.std_dev})`, Triangular: `TRIA(${p.minimum}, ${p.value}, ${p.maximum})`,
+                         Uniform: `UNIF(${p.minimum}, ${p.maximum})`}[p.delay_type] ?? p.expression);
+
+const M = {
+  create: {g: "Basic Process", label: "Create", color: "var(--create)", fields: [
+    f("entity_type", "Entity Type", "ref:entities", "Entity 1"),
+    f("type", "Type", ["Random (Expo)", "Schedule", "Constant", "Expression"], "Random (Expo)"),
+    f("value", "Value", "expr", "1", p => has(p.type, "Random (Expo)", "Constant")),
+    f("schedule", "Schedule Name", "ref:schedules", "", p => p.type === "Schedule"),
+    f("expression", "Expression", "expr", "EXPO(1)", p => p.type === "Expression"),
+    f("units", "Units", UNITS, "@units", p => p.type !== "Schedule"),
+    f("entities_per_arrival", "Entities per Arrival", "expr", "1"),
+    f("max_arrivals", "Max Arrivals", "expr", "Infinite"),
+    f("first_creation", "First Creation", "expr", "0.0", p => p.type !== "Schedule")]},
+  dispose: {g: "Basic Process", label: "Dispose", color: "var(--dispose)", fields: [
+    f("record_stats", "Record Entity Statistics", "check", true)]},
+  process: {g: "Basic Process", label: "Process", color: "var(--process)", fields: [
+    f("type", "Type", ["Standard", "Submodel"], "Standard"),
+    f("action", "Action", ["Delay", "Seize Delay", "Seize Delay Release", "Delay Release"], "Seize Delay Release"),
+    f("priority", "Priority", PRIO, "Medium (2)", p => p.action.startsWith("Seize")),
+    f("priority_expr", "Priority (expression, lower goes first)", "expr", "2", p => p.action.startsWith("Seize") && p.priority === "Other"),
+    {...resources(["Resource", "Set"]), show: p => p.action !== "Delay"},
+    f("delay_type", "Delay Type", ["Constant", "Normal", "Triangular", "Uniform", "Expression"], "Triangular"),
+    f("units", "Units", UNITS, "@units"),
+    f("allocation", "Allocation", ALLOC, "Value Added"),
+    f("minimum", "Minimum", "expr", ".5", p => has(p.delay_type, "Triangular", "Uniform")),
+    f("value", "Value (Most Likely)", "expr", "1", p => has(p.delay_type, "Constant", "Normal", "Triangular")),
+    f("maximum", "Maximum", "expr", "1.5", p => has(p.delay_type, "Triangular", "Uniform")),
+    f("std_dev", "Std Dev", "expr", ".2", p => p.delay_type === "Normal"),
+    f("expression", "Expression", "expr", "1", p => p.delay_type === "Expression"),
+    f("report", "Report Statistics", "check", true)].map((fd, i) => i === 0 ? fd : {...fd, show: p => p.type !== "Submodel" && (!fd.show || fd.show(p))})},
+  decide: {g: "Basic Process", label: "Decide", color: "var(--decide)", fields: [
+    f("type", "Type", ["2-way by Chance", "2-way by Condition", "N-way by Chance", "N-way by Condition"], "2-way by Chance"),
+    f("percent_true", "Percent True (0-100)", "expr", "50", p => p.type === "2-way by Chance"),
+    ...COND.map(c => ({...c, show: p => p.type === "2-way by Condition" && (!c.show || c.show(p))})),
+    f("percentages", "Percentages", "repeat", [{percent: "50"}], p => p.type === "N-way by Chance",
+      {cols: [f("percent", "Percent (0-100)", "expr", "50")], title: r => `${r.percent}%`, add: "Add percentage"}),
+    f("conditions", "Conditions", "repeat", [{if_type: "Expression", value: ""}], p => p.type === "N-way by Condition",
+      {cols: COND, title: condTitle, add: "Add condition"})]},
+  batch: {g: "Basic Process", label: "Batch", color: "var(--batch)", fields: [
+    f("type", "Type", ["Temporary", "Permanent"], "Permanent"),
+    f("batch_size", "Batch Size", "expr", "2"),
+    f("save_criterion", "Save Criterion", ["First", "Last", "Sum", "Product"], "Last"),
+    f("rule", "Rule", ["Any Entity", "By Attribute"], "Any Entity"),
+    f("attribute", "Attribute Name", "ref:attributes", "Attribute 1", p => p.rule === "By Attribute"),
+    f("rep_type", "Representative Entity Type", "ref:entities", "", null, {placeholder: () => "(from Save Criterion)"})]},
+  separate: {g: "Basic Process", label: "Separate", color: "var(--batch)", fields: [
+    f("type", "Type", ["Duplicate Original", "Split Existing Batch"], "Duplicate Original"),
+    f("percent_cost", "Percent Cost to Duplicates (0-100)", "expr", "50", p => p.type === "Duplicate Original"),
+    f("duplicates", "# of Duplicates", "expr", "1", p => p.type === "Duplicate Original"),
+    f("member_attrs", "Member Attributes", ["Retain Original Entity Values", "Take All Representative Values", "Take Specific Representative Values"],
+      "Retain Original Entity Values", p => p.type === "Split Existing Batch"),
+    f("attributes", "Attributes", "repeat", [], p => p.type === "Split Existing Batch" && p.member_attrs.startsWith("Take Specific"),
+      {cols: [f("attribute", "Attribute Name", "ref:attributes", "Attribute 1")], title: r => r.attribute, add: "Add attribute"})]},
+  assign: {g: "Basic Process", label: "Assign", color: "var(--assign)", fields: [
+    f("assignments", "Assignments", "repeat", [{type: "Attribute", attribute: "Attribute 1", value: "1"}], null,
+      {cols: ASSIGN, title: assignTitle, add: "Add assignment"})]},
+  record: {g: "Basic Process", label: "Record", color: "var(--record)", fields: [
+    f("type", "Type", ["Count", "Entity Statistics", "Time Interval", "Time Between", "Expression"], "Count"),
+    f("attribute", "Attribute Name", "ref:attributes", "Attribute 1", p => p.type === "Time Interval"),
+    f("value", "Value", "expr", "1", p => has(p.type, "Count", "Expression")),
+    f("record_into_set", "Record into Set", "check", false, p => p.type !== "Entity Statistics"),
+    f("counter_name", "Counter Name", "text", "", p => p.type === "Count" && !p.record_into_set, {placeholder: p => p.name}),
+    f("tally_name", "Tally Name", "text", "", p => has(p.type, "Time Interval", "Time Between", "Expression") && !p.record_into_set, {placeholder: p => p.name}),
+    f("counter_set", "Counter Set Name", "ref:sets", "", p => p.type === "Count" && p.record_into_set),
+    f("tally_set", "Tally Set Name", "ref:sets", "", p => has(p.type, "Time Interval", "Time Between", "Expression") && p.record_into_set),
+    f("set_index", "Set Index", "expr", "1", p => p.type !== "Entity Statistics" && p.record_into_set)]},
+  seize: {g: "Advanced Process", label: "Seize", color: "var(--process)", fields: [
+    f("allocation", "Allocation", ALLOC, "Other"),
+    f("priority", "Priority", PRIO, "Medium (2)"),
+    f("priority_expr", "Priority (expression, lower goes first)", "expr", "2", p => p.priority === "Other"),
+    resources(["Resource", "Set", "Attribute", "Expression"]),
+    f("resource_state", "Resource State", "ref:states", "", null, {placeholder: () => "(no state assignment)"}),
+    ...QUEUE]},
+  delay: {g: "Advanced Process", label: "Delay", color: "var(--process)", fields: [
+    f("allocation", "Allocation", ALLOC, "Other"),
+    f("delay_time", "Delay Time", "expr", "0.0"),
+    f("units", "Units", UNITS, "@units")]},
+  release: {g: "Advanced Process", label: "Release", color: "var(--process)", fields: [
+    resources(["Resource", "Set", "Attribute", "Expression"], true)]},
+  hold: {g: "Advanced Process", label: "Hold", color: "var(--hold)", fields: [
+    f("type", "Type", ["Wait for Signal", "Scan for Condition", "Infinite Hold"], "Wait for Signal"),
+    f("wait_value", "Wait for Value", "expr", "1", p => p.type === "Wait for Signal"),
+    f("limit", "Limit", "expr", "", p => p.type === "Wait for Signal", {placeholder: () => "(all waiting entities)"}),
+    f("condition", "Condition", "expr", "", p => p.type === "Scan for Condition"),
+    ...QUEUE]},
+  signal: {g: "Advanced Process", label: "Signal", color: "var(--hold)", fields: [
+    f("signal_value", "Signal Value", "expr", "1"),
+    f("limit", "Limit", "expr", "", null, {placeholder: () => "(all waiting entities)"})]},
+  remove: {g: "Advanced Process", label: "Remove", color: "var(--hold)", fields: [
+    f("queue_name", "Queue Name", "ref:queues", ""),
+    f("rank", "Rank of Entity", "expr", "1")]},
+  station: {g: "Advanced Transfer", label: "Station", color: "var(--transfer)", fields: [
+    f("station", "Station Name", "text", "")]},
+  route: {g: "Advanced Transfer", label: "Route", color: "var(--transfer)", fields: [
+    f("destination", "Station Name", "ref:stations", ""), f("time", "Route Time", "expr", "0"), f("units", "Units", UNITS, "@units")]},
+  request: {g: "Advanced Transfer", label: "Request", color: "var(--transfer)", fields: [
+    f("transporter", "Transporter Name", "ref:transporters", ""), f("rule", "Selection Rule", ["SDS", "LDS", "CYC", "RAN", "POR"], "SDS")]},
+  transport: {g: "Advanced Transfer", label: "Transport", color: "var(--transfer)", fields: [
+    f("transporter", "Transporter Name", "ref:transporters", ""), f("destination", "Station Name", "ref:stations", "")]},
+  free: {g: "Advanced Transfer", label: "Free", color: "var(--transfer)", fields: [
+    f("transporter", "Transporter Name", "ref:transporters", "")]},
+  access: {g: "Advanced Transfer", label: "Access", color: "var(--transfer)", fields: [
+    f("conveyor", "Conveyor Name", "ref:conveyors", ""), f("cells", "# of Cells", "expr", "1")]},
+  convey: {g: "Advanced Transfer", label: "Convey", color: "var(--transfer)", fields: [
+    f("conveyor", "Conveyor Name", "ref:conveyors", ""), f("destination", "Station Name", "ref:stations", "")]},
+  exit: {g: "Advanced Transfer", label: "Exit", color: "var(--transfer)", fields: [
+    f("conveyor", "Conveyor Name", "ref:conveyors", "")]},
+  sub_in: {g: "Submodel", label: "Entry Point", color: "var(--create)", sub: true, fields: []},
+  sub_out: {g: "Submodel", label: "Exit Point", color: "var(--dispose)", sub: true, fields: []},
+};
+const TERMINAL = new Set(["dispose", "route", "transport", "convey", "sub_out"]);  // no "out" port
+const SOURCE = new Set(["create", "station", "sub_in"]);                         // may have no input
+function portsOf(n) {
+  const p = n.props;
+  if (n.type === "decide") {
+    if (String(p.type).startsWith("N-way")) {
+      const rows = (String(p.type).includes("Condition") ? p.conditions : p.percentages) || [];
+      return rows.map((_, i) => String(i + 1)).concat(["else"]);
+    }
+    return ["true", "false"];
+  }
+  if (n.type === "separate") return p.type === "Duplicate Original" ? ["original", "duplicate"] : ["original"];
+  if (n.type === "remove") return ["original", "removed"];
+  return TERMINAL.has(n.type) ? [] : ["out"];
+}
+function moduleQueue(n) {   // queue the module's entities wait in (for animation and the queue list)
+  const p = n.props;
+  if (has(n.type, "seize", "hold")) return p.queue_type === "Queue" ? (p.queue_name || `${p.name}.Queue`) : null;
+  if (n.type === "process" && p.type !== "Submodel" && String(p.action).startsWith("Seize")) return `${p.name}.Queue`;
+  if (has(n.type, "batch", "request", "access")) return `${p.name}.Queue`;
+  return null;
+}
+function subtitle(n) {
+  const p = n.props, rs = (p.resources || []).map(resTitle).join(", ");
+  switch (n.type) {
+    case "create": return p.type === "Schedule" ? `schedule ${p.schedule || "?"}` : p.type === "Expression" ? p.expression : p.type === "Constant" ? `every ${p.value} ${String(p.units).toLowerCase()}` : `EXPO(${p.value}) ${String(p.units).toLowerCase()}`;
+    case "process": if (p.type === "Submodel") return `submodel · ${((n.sub || {}).nodes || []).filter(x => !M[x.type].sub).length} modules`;
+      return p.action === "Delay" ? delayText(p) : `${rs || "?"} · ${delayText(p)}`;
+    case "seize": case "release": return rs;
+    case "delay": return p.delay_time;
+    case "decide": return p.type === "2-way by Chance" ? `${p.percent_true}% true` : p.type === "2-way by Condition" ? condTitle(p) : `${portsOf(n).length} ways`;
+    case "assign": { const a = p.assignments || []; return a.length ? assignTitle(a[0]) + (a.length > 1 ? ` (+${a.length - 1})` : "") : "(none)"; }
+    case "record": return p.type === "Count" ? `count ${p.record_into_set ? p.counter_set : p.counter_name || p.name}` : p.type.toLowerCase();
+    case "station": return p.station;
+    case "route": case "convey": case "transport": return "→ " + (p.destination || "?");
+    case "hold": return p.type === "Scan for Condition" ? p.condition : p.type === "Infinite Hold" ? "infinite hold" : `signal ${p.wait_value}`;
+    case "signal": return `signal ${p.signal_value}`;
+    case "batch": return `${p.batch_size} · ${String(p.type).toLowerCase()}`;
+    case "separate": return p.type === "Duplicate Original" ? `${p.duplicates} duplicate(s)` : "split batch";
+    case "remove": return `from ${p.queue_name || "?"}`;
+    default: return "";
+  }
+}
+
+// ======================= data modules =======================
+const T = {
+  entities: {g: "Basic Process", label: "Entity", hint: "Entity types. The animation draws the picture, in the override colour if one is set.", fields: [
+    f("initial_picture", "Initial Picture", Object.keys(PICTURES), "Picture.Report"),
+    f("color", "Animation colour (overrides picture)", "color", ""),
+    f("holding_cost", "Holding Cost / Hour", "expr", "0.0"),
+    f("initial_va", "Initial VA Cost", "expr", "0.0"), f("initial_nva", "Initial NVA Cost", "expr", "0.0"),
+    f("initial_wait", "Initial Waiting Cost", "expr", "0.0"), f("initial_transfer", "Initial Transfer Cost", "expr", "0.0"),
+    f("initial_other", "Initial Other Cost", "expr", "0.0"), f("report", "Report Statistics", "check", true)]},
+  queues: {g: "Basic Process", label: "Queue", hint: "Every module that makes entities wait (Process with Seize, Seize, Hold, Batch …) has a queue named \"<module name>.Queue\", listed here automatically. Change its Type to rank it differently.", fields: [
+    f("type", "Type", ["First In First Out", "Last In First Out", "Lowest Attribute Value", "Highest Attribute Value"], "First In First Out"),
+    f("attribute", "Attribute Name (or expression)", "ref:attributes", "", p => p.type.includes("Attribute")),
+    f("shared", "Shared", "check", false), f("report", "Report Statistics", "check", true)]},
+  resources: {g: "Basic Process", label: "Resource", hint: "Naming a resource in a module adds it here.", fields: [
+    f("type", "Type", ["Fixed Capacity", "Based on Schedule"], "Fixed Capacity"),
+    f("capacity", "Capacity", "expr", "1", p => p.type === "Fixed Capacity"),
+    f("schedule", "Schedule Name", "ref:schedules", "", p => p.type === "Based on Schedule"),
+    f("schedule_rule", "Schedule Rule", ["Ignore", "Wait", "Preempt"], "Wait", p => p.type === "Based on Schedule"),
+    f("busy_per_hour", "Busy / Hour", "expr", "0.0"), f("idle_per_hour", "Idle / Hour", "expr", "0.0"), f("per_use", "Per Use", "expr", "0.0"),
+    f("stateset", "StateSet Name", "ref:statesets", ""),
+    f("initial_state", "Initial State", "ref:states", "", p => !!p.stateset),
+    f("failures", "Failures", "repeat", [], null, {cols: [f("failure", "Failure Name", "ref:failures", ""), f("rule", "Failure Rule", ["Ignore", "Wait", "Preempt"], "Ignore")],
+      title: r => `${r.failure || "?"} (${String(r.rule).toLowerCase()})`, add: "Add failure"}),
+    f("report", "Report Statistics", "check", true)]},
+  variables: {g: "Basic Process", label: "Variable", hint: "Leave Rows blank for a single value. Initial values are comma separated, row by row.", fields: [
+    f("rows", "Rows", "expr", ""), f("columns", "Columns", "expr", "", p => !!String(p.rows || "").trim()),
+    f("data_type", "Data Type", ["Real", "String"], "Real"),
+    f("clear", "Clear Option", ["Statistics", "System", "None"], "System"),
+    f("initial_values", "Initial Values", "multi", "0"),
+    f("report", "Report Statistics", "check", false, p => !String(p.rows || "").trim() && p.data_type === "Real")]},
+  schedules: {g: "Basic Process", label: "Schedule", hint: "Capacity: resource units; Arrival: entities per hour; Other: read with SchedValue(name). Edit graphically to set each hour of the day; a blank last duration lasts forever.", fields: [
+    f("type", "Type", ["Capacity", "Arrival", "Other"], "Capacity"),
+    f("units", "Time Units", SCHED_UNITS, "Hours"),
+    f("scale", "Scale Factor", "expr", "1.0", p => p.type !== "Capacity"),
+    f("end_logic", "End of Schedule", ["Repeat from Beginning", "Remain at Value"], "Repeat from Beginning"),
+    f("durations", "Durations", "repeat", [{value: "1", duration: "8"}], null, {cols: [f("value", "Value", "expr", "1"), f("duration", "Duration", "expr", "")],
+      title: r => `${r.value} for ${String(r.duration).trim() || "∞"}`, add: "Add row", inline: true})]},
+  sets: {g: "Basic Process", label: "Set", hint: "Members separated by commas or new lines.", fields: [
+    f("type", "Type", ["Resource", "Counter", "Tally", "Entity Type", "Entity Picture", "Queue"], "Resource"),
+    f("members", "Members", "multi", "")]},
+  attributes: {g: "Basic Process", label: "Attribute", hint: "Per-entity values. Leave Rows blank for a single value.", fields: [
+    f("rows", "Rows", "expr", ""), f("columns", "Columns", "expr", "", p => !!String(p.rows || "").trim()),
+    f("data_type", "Data Type", ["Real", "String"], "Real"), f("initial_values", "Initial Values", "multi", "0")]},
+  expressions: {g: "Advanced Process", label: "Expression", hint: "Named expressions, usable anywhere by name.", fields: [
+    f("expression", "Expression Value", "expr", "0")]},
+  failures: {g: "Advanced Process", label: "Failure", hint: "Attach failures to resources in the Resource table.", fields: [
+    f("type", "Type", ["Count", "Time"], "Time"),
+    f("count", "Count", "expr", "100", p => p.type === "Count"),
+    f("up_time", "Up Time", "expr", "EXPO(100)", p => p.type === "Time"),
+    f("up_units", "Up Time Units", UNITS, "@units", p => p.type === "Time"),
+    f("down_time", "Down Time", "expr", "10"), f("down_units", "Down Time Units", UNITS, "@units"),
+    f("state", "Uptime in this State only", "ref:states", "", p => p.type === "Time", {placeholder: () => "(all states)"})]},
+  statesets: {g: "Advanced Process", label: "StateSet", hint: "Resource state names; an AutoState maps Idle/Busy/Failed/Inactive to the name.", fields: [
+    f("states", "States", "repeat", [{state: "Working", autostate: "Busy"}], null, {cols: [f("state", "State Name", "text", ""),
+      f("autostate", "AutoState or Failure", ["", "Idle", "Busy", "Failed", "Inactive"], "")], title: r => r.state + (r.autostate ? ` = ${r.autostate}` : ""), add: "Add state"})]},
+  statistics: {g: "Advanced Process", label: "Statistic", hint: "Reported under User Specified. Time-Persistent: time average of an expression; Output: an expression at the end of the run; Frequency: % of time per value, category or resource state. Tally and Counter are filled by Record modules.", fields: [
+    f("type", "Type", ["Time-Persistent", "Tally", "Counter", "Output", "Frequency"], "Time-Persistent"),
+    f("frequency_type", "Frequency Type", ["Value", "State"], "Value", p => p.type === "Frequency"),
+    f("expression", "Expression", "expr", "", p => ["Time-Persistent", "Output"].includes(p.type) || (p.type === "Frequency" && p.frequency_type !== "State"),
+      {placeholder: () => "e.g. NQ(Process 1.Queue), NR(Doctor)"}),
+    f("resource", "Resource Name", "ref:resources", "", p => p.type === "Frequency" && p.frequency_type === "State"),
+    f("limit", "Limit", "expr", "Infinite", p => p.type === "Counter"),
+    f("initial_value", "Initial Value", "expr", "0", p => p.type === "Counter"),
+    f("report_label", "Report Label", "text", "", p => !["Tally", "Counter"].includes(p.type), {placeholder: () => "(the Name)"}),
+    f("categories", "Categories", "repeat", [], p => p.type === "Frequency", {cols: [
+      f("kind", "Constant or Range", ["Constant", "Range"], "Constant"),
+      f("value", "Value", "expr", ""), f("high", "High Value", "expr", "", r => r.kind === "Range"),
+      f("name", "Category Name", "text", ""), f("option", "Category Option", ["Include", "Exclude"], "Include")],
+      title: r => (r.name || (r.kind === "Range" ? `${r.value} to ${r.high}` : r.value) || "?") + (r.option === "Exclude" ? " (excluded)" : ""),
+      add: "Add category"})]},
+  transporters: {g: "Advanced Transfer", label: "Transporter", hint: "Free-path. Distances: one 'From-To: length' per line.", fields: [
+    f("units", "Number of Units", "expr", "1"), f("velocity", "Velocity", "expr", "1"),
+    f("initial_station", "Initial Position", "ref:stations", ""), f("distances", "Distances", "multi", "")]},
+  conveyors: {g: "Advanced Transfer", label: "Conveyor", hint: "Segments in path order, one 'From-To: length' per line.", fields: [
+    f("segments", "Segments", "multi", ""), f("velocity", "Velocity", "expr", "1"), f("cell_size", "Cell Size", "expr", "1"),
+    f("type", "Type", ["nonaccumulating", "accumulating"], "nonaccumulating")]},
+};
+
+// ======================= Run > Setup (Arena's tabs) =======================
+const UNITS_OF_BASE = ["Seconds", "Minutes", "Hours", "Days"];
+const SETUP = {
+  "Replication Parameters": [
+    f("replications", "Number of Replications", "expr", "1"),
+    f("init_stats", "Initialize Between Replications: Statistics", "check", true),
+    f("init_system", "Initialize Between Replications: System", "check", true),
+    f("warmup", "Warm-up Period", "expr", "0"), f("warmup_units", "Warm-up Time Units", UNITS_OF_BASE, "@units"),
+    f("length", "Replication Length", "expr", "480", null, {placeholder: () => "Infinite"}),
+    f("length_units", "Replication Length Time Units", UNITS_OF_BASE, "@units"),
+    f("hours_per_day", "Hours Per Day", "expr", "24"),
+    f("terminating", "Terminating Condition", "expr", "", null, {placeholder: () => "e.g. NR(Teller) == 0 && TNOW > 600"})],
+  "Project Parameters": [
+    f("analyst", "Analyst Name", "text", ""), f("description", "Project Description", "multi", ""),
+    f("stats_costing", "Statistics Collection: Costing", "check", true), f("stats_entities", "Statistics Collection: Entities", "check", true),
+    f("stats_resources", "Statistics Collection: Resources", "check", true), f("stats_queues", "Statistics Collection: Queues", "check", true),
+    f("stats_processes", "Statistics Collection: Processes", "check", true)],
+  "Run Speed": [
+    f("anim_speed", "Animation Speed Factor (base time units per second)", "expr", "", null, {placeholder: () => "auto: the run in about a minute"})],
+  "Run Control": [
+    f("batch_run", "Batch Run (No Animation)", "check", false),
+    f("rng_mode", "Random Number Generator", ["arena", "exact"], "arena"),
+    f("disable_randomness", "Disable Randomness (use the mean of each distribution)", "check", false)],
+};
+const SETUP_FIELDS = Object.values(SETUP).flat();
+
+// ======================= state =======================
+const W = 140, H = 58, GRID = 10;
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+let model, sel = new Set(), selLink = null, nextId = 1, anim = null, view = {x: 0, y: 0, k: 1};
+let undo = [], redo = [], dirty = false, armed = null, problems = [], sideTab = "model", clip = null;
+
+// Submodels: a Process of Type Submodel holds its own {nodes, links}; `path` lists the
+// Submodel processes being viewed. The engine sees inner modules as "<process id>/<id>".
+let path = [];
+function G() {
+  let g = model;
+  for (const id of path) { const n = g.nodes.find(x => x.id === id); if (!n || !n.sub) break; g = n.sub; }
+  return g;
+}
+function eachNode(fn, g = model, pre = "") {
+  for (const n of g.nodes) { fn(n, pre + n.id); if (n.sub && n.props.type === "Submodel") eachNode(fn, n.sub, pre + n.id + "/"); }
+}
+function allNodes() { const a = []; eachNode(n => a.push(n)); return a; }
+const levelPrefix = () => path.length ? path.join("/") + "/" : "";
+function visibleId(fid) {   // the module at the current level that shows flat id `fid`
+  const pre = levelPrefix(); fid = String(fid);
+  return fid.startsWith(pre) ? fid.slice(pre.length).split("/")[0] : null;
+}
+function findDeep(fid) { let hit = null; eachNode((n, f) => { if (f === fid) hit = n; }); return hit; }
+function newSub() {
+  return {nodes: [{id: "1", type: "sub_in", x: 40, y: 160, props: {name: "Entry"}},
+                  {id: "2", type: "sub_out", x: 520, y: 160, props: {name: "Exit"}}], links: [{from: "1", to: "2", port: "out"}]};
+}
+function fixPath() {   // drop levels that no longer exist (after undo, open, delete)
+  let g = model; const ok = [];
+  for (const id of path) { const n = g.nodes.find(x => x.id === id); if (!n || !n.sub || n.props.type !== "Submodel") break; ok.push(id); g = n.sub; }
+  path = ok;
+  nextId = 1 + Math.max(0, ...G().nodes.map(n => +n.id || 0));
+  renderCrumbs();
+}
+function goLevel(p) {
+  path = p; sel = new Set(); selLink = null; fixPath();
+  if (anim) { $("ents").innerHTML = ""; anim.dots.clear(); }
+  render(); renderSide(); requestAnimationFrame(fit);
+  if (anim) draw();
+}
+function renderCrumbs() {
+  renderNavigate();
+  const c = $("crumbs"); c.innerHTML = "";
+  c.style.display = path.length ? "flex" : "none";
+  document.querySelectorAll(".pal.subonly").forEach(e => e.style.display = path.length ? "" : "none");
+  document.querySelectorAll(".pbpanel.subonly").forEach(e => e.style.display = path.length ? "" : "none");
+  const parts = [["Top Level", []]];
+  let g = model;
+  path.forEach((id, i) => { const n = g.nodes.find(x => x.id === id); parts.push([n ? n.props.name : id, path.slice(0, i + 1)]); g = n ? n.sub : g; });
+  parts.forEach(([label, p], i) => {
+    if (i) c.append(" › ");
+    const b = document.createElement("button"); b.textContent = label; b.disabled = i === parts.length - 1;
+    b.onclick = () => goLevel(p); c.appendChild(b);
+  });
+}
+function blank() {
+  return {version: 2, name: "Model", time_units: "minutes", run: {replications: "1", length: "480", warmup: "0", rng_mode: "arena", disable_randomness: false},
+          data: Object.fromEntries(Object.keys(T).map(k => [k, {}])), nodes: [], links: []};
+}
+const clone = x => JSON.parse(JSON.stringify(x));
+const unitsName = () => { const u = (model && model.time_units) || "minutes"; return u[0].toUpperCase() + u.slice(1); };
+function fieldDefaults(fields) {
+  const o = {};
+  for (const fd of fields) o[fd.key] = fd.def === "@units" ? unitsName() : clone(fd.def);
+  return o;
+}
+function defaults(type) { return fillRows(M[type].fields, {name: "", ...fieldDefaults(M[type].fields)}); }
+function fillRows(fields, obj) {   // missing keys get their defaults, also inside repeat rows
+  for (const fd of fields) {
+    if (!(fd.key in obj)) obj[fd.key] = fd.def === "@units" ? unitsName() : clone(fd.def);
+    if (fd.kind === "repeat") for (const r of obj[fd.key] || []) for (const c of fd.cols) if (!(c.key in r)) r[c.key] = c.def === "@units" ? unitsName() : clone(c.def);
+  }
+  return obj;
+}
+function normalize(m) {     // m is a version-2 graph
+  const b = blank();
+  model = m;                // unitsName() reads the model being normalised
+  m.run = fillRows(SETUP_FIELDS, {...b.run, ...(m.run || {})});
+  m.data = {...b.data, ...(m.data || {})};
+  for (const [k, t] of Object.entries(T)) for (const row of Object.values(m.data[k])) fillRows(t.fields, row);
+  const level = g => {
+    for (const n of g.nodes) {
+      n.props = fillRows(M[n.type].fields, {name: "", ...(n.props || {})});
+      if (n.type === "process" && n.props.type === "Submodel") level(n.sub ||= newSub());
+    }
+  };
+  level(m);
+  return m;
+}
+function sample() {
+  const m = blank();
+  m.name = "Bank";
+  model = m;
+  m.data.resources = {Teller: fillRows(T.resources.fields, {capacity: "2"})};
+  m.data.entities = {Customer: fillRows(T.entities.fields, {initial_picture: "Picture.Report"})};
+  const mk = (id, type, x, y, props) => ({id, type, x, y, props: {...defaults(type), ...props}});
+  m.nodes = [
+    mk("1", "create", 40, 160, {name: "Customers arrive", entity_type: "Customer", value: "2"}),
+    mk("2", "process", 240, 160, {name: "Teller Service", resources: [{type: "Resource", resource: "Teller", quantity: "1"}],
+                                  minimum: "2", value: "4", maximum: "7"}),
+    mk("3", "record", 440, 160, {name: "Served"}),
+    mk("4", "dispose", 640, 160, {name: "Leave"}),
+  ];
+  m.links = [{from: "1", to: "2", port: "out"}, {from: "2", to: "3", port: "out"}, {from: "3", to: "4", port: "out"}];
+  return m;
+}
+async function upgraded(m) {    // first-version files are converted by the server
+  if ((m.version || 1) >= 2) return m;
+  return await api("POST", "/api/upgrade", m);
+}
+function setModel(m, keepHistory) {
+  model = normalize(m); sel = new Set(); selLink = null;
+  if (!keepHistory) path = [];
+  fixPath();
+  $("mname").value = model.name;
+  if (!keepHistory) { undo = []; redo = []; }
+  stopAnim(); render(); renderSide(); updateButtons(); scheduleValidate();
+  try {   // results belong to the model they came from
+    if (lastResults) { clearResults("Run the model to see its results."); $("bottom").classList.remove("open"); }
+  } catch (e) { /* first call at start-up, before the run state exists */ }
+}
+function snapshot() { return JSON.stringify(model); }
+function change(fn, opts = {}) {      // every edit goes through here: history + autosave + validate
+  if (anim) return;
+  undo.push(snapshot()); if (undo.length > 200) undo.shift(); redo = [];
+  fn();
+  markDirty(); render(); if (!opts.keepSide) renderSide(); updateButtons(); scheduleValidate();
+}
+function markDirty() {
+  dirty = true; showSaved();
+  try { localStorage.setItem("simcore.autosave", snapshot()); } catch (e) { /* storage unavailable */ }
+}
+function updateButtons() { $("bundo").disabled = !undo.length; $("bredo").disabled = !redo.length; }
+function doUndo() { if (!undo.length || anim) return; redo.push(snapshot()); const s = undo.pop(); const k = undo; setModel(JSON.parse(s), true); undo = k; markDirty(); updateButtons(); }
+function doRedo() { if (!redo.length || anim) return; undo.push(snapshot()); const s = redo.pop(); const r = redo; setModel(JSON.parse(s), true); redo = r; markDirty(); updateButtons(); }
+
+// ======================= Project Bar (Arena's) =======================
+// Panels: Basic Process / Advanced Process / Advanced Transfer (flowchart modules to drag, data
+// modules that open their spreadsheet), Reports (results of the last run), Navigate (levels, thumbnail).
+const SHAPES = {   // module icons, after Arena's shapes
+  create: "M2 3h22l8 8-8 8H2z", dispose: "M10 3h22v16H10l-8-8z", process: "M2 3h30v16H2z", decide: "M17 1l15 10-15 10L2 11z",
+  batch: "M2 3h30l-6 16H8z", separate: "M8 3h18l6 16H2z", assign: "M2 3h30v16H2zM2 8h30", record: "M2 3h30v16H2zM8 3v16",
+  hold: "M2 3h30v16H2zM10 3v16M24 3v16", signal: "M2 11l10-8v5h20v6H12v5z", sub_in: "M2 3h22l8 8-8 8H2z", sub_out: "M10 3h22v16H10l-8-8z"};
+const DATA_ICON = "M2 2h30v18H2zM2 8h30M2 14h30M12 2v18M22 2v18";
+function icon(path, color) { return `<svg viewBox="0 0 34 22" aria-hidden="true"><path d="${path}" fill="${color}" fill-opacity=".25" stroke="${color}" stroke-width="1.4"/></svg>`; }
+let pbOpen = {"Basic Process": true, "Advanced Process": false, "Advanced Transfer": false, "Submodel": true, Reports: true, Navigate: true};
+try { Object.assign(pbOpen, JSON.parse(localStorage.getItem("simcore.pb") || "{}")); } catch (e) {}
+function pbPanel(title, extraClass) {
+  const box = document.createElement("div"); box.className = "pbpanel" + (extraClass ? " " + extraClass : "");
+  const h = document.createElement("button"); h.className = "pbhead"; h.textContent = title; h.setAttribute("aria-expanded", String(pbOpen[title] !== false));
+  const body = document.createElement("div"); body.className = "pbbody"; body.hidden = pbOpen[title] === false;
+  h.onclick = () => { body.hidden = !body.hidden; h.setAttribute("aria-expanded", String(!body.hidden)); pbOpen[title] = !body.hidden; try { localStorage.setItem("simcore.pb", JSON.stringify(pbOpen)); } catch (e) {} };
+  box.append(h, body); $("palette").appendChild(box);
+  return body;
+}
+(function buildProjectBar() {
+  for (const g of ["Basic Process", "Advanced Process", "Advanced Transfer", "Submodel"]) {
+    const body = pbPanel(g, g === "Submodel" ? "subonly" : "");
+    const grid = document.createElement("div"); grid.className = "pbgrid"; body.appendChild(grid);
+    for (const [k, d] of Object.entries(M).filter(([, d]) => d.g === g)) {
+      const e = document.createElement("div");
+      e.className = "pal" + (d.sub ? " subonly" : ""); e.draggable = true; e.dataset.kind = k; e.tabIndex = 0; e.setAttribute("role", "button");
+      e.title = `${d.label}: drag onto the canvas, or click then click the canvas`;
+      e.innerHTML = icon(SHAPES[k] || SHAPES.process, d.color) + `<span>${d.label}</span>`;
+      e.addEventListener("dragstart", ev => { ev.dataTransfer.setData("text/kind", k); disarm(); });
+      e.addEventListener("click", () => { armed === k ? disarm() : arm(k); if (sheet && sheet.kind === "module" && $("p-sheet").classList.contains("on")) openSheet({kind: "module", type: k}); });
+      e.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); e.click(); } });
+      grid.appendChild(e);
+    }
+    const tables = Object.entries(T).filter(([, t]) => t.g === g);
+    if (tables.length) {
+      const sep = document.createElement("div"); sep.className = "pbsep"; sep.textContent = "Data modules"; body.appendChild(sep);
+      const dg = document.createElement("div"); dg.className = "pbgrid"; body.appendChild(dg);
+      for (const [key, t] of tables) {
+        const e = document.createElement("button"); e.className = "pal data"; e.dataset.table = key;
+        e.title = `${t.label}: open its spreadsheet`; e.setAttribute("aria-label", `${t.label} data module`);
+        e.innerHTML = icon(DATA_ICON, "var(--accent)") + `<span>${t.label}</span>`;
+        e.onclick = () => openSheet({kind: "data", key});
+        dg.appendChild(e);
+      }
+    }
+  }
+  const rb = pbPanel("Reports"); rb.classList.add("pbreports"); rb.id = "pbreports";
+  const nb = pbPanel("Navigate"); nb.classList.add("pbnav"); nb.id = "pbnav";
+})();
+const REPORTS = [["Category Overview", "sum-top"], ["Entities", "sum-entity"], ["Processes", "sum-process"], ["Queues", "sum-queue"],
+                 ["Resources", "sum-resource"], ["User Specified", "sum-user"], ["Full text report", null]];
+function renderReportsPanel() {
+  const rb = $("pbreports"); rb.innerHTML = "";
+  for (const [label, id] of REPORTS) {
+    const b = document.createElement("button"); b.textContent = label; b.disabled = !lastResults;
+    b.title = lastResults ? `Show ${label}` : "Run the model to get reports";
+    b.onclick = () => {
+      if (!id) return openPane("report");
+      openPane("summary"); const t = document.getElementById(id); if (t) t.scrollIntoView({block: "start"});
+    };
+    rb.appendChild(b);
+  }
+  if (!lastResults) { const h = document.createElement("div"); h.className = "hint"; h.textContent = "Available after a run."; rb.appendChild(h); }
+}
+function renderNavigate() {
+  const nb = $("pbnav"); if (!nb) return; nb.innerHTML = "";
+  const walk = (g, p, depth) => {
+    for (const n of g.nodes) if (n.type === "process" && n.props.type === "Submodel" && n.sub) {
+      const q = [...p, n.id];
+      const b = document.createElement("button"); b.textContent = "  ".repeat(depth) + "▸ " + n.props.name;
+      b.className = q.join("/") === path.join("/") ? "on" : ""; b.onclick = () => goLevel(q); nb.appendChild(b);
+      walk(n.sub, q, depth + 1);
+    }
+  };
+  const top = document.createElement("button"); top.textContent = "Top Level"; top.className = path.length ? "" : "on"; top.onclick = () => goLevel([]); nb.appendChild(top);
+  walk(model, [], 1);
+  const svg = document.createElementNS(NS, "svg"); svg.id = "thumb"; svg.setAttribute("aria-label", "Model thumbnail: click to move the view"); nb.appendChild(svg);
+  drawThumb();
+}
+function drawThumb() {
+  const svg = $("thumb"); if (!svg || !model) return; svg.innerHTML = "";
+  const nodes = G().nodes, r = $("canvas").getBoundingClientRect();
+  const vx0 = -view.x / view.k, vy0 = -view.y / view.k, vw = r.width / view.k, vh = r.height / view.k;
+  const xs = nodes.flatMap(n => [n.x, n.x + W]).concat([vx0, vx0 + vw]), ys = nodes.flatMap(n => [n.y, n.y + H]).concat([vy0, vy0 + vh]);
+  const x0 = Math.min(...xs) - 20, y0 = Math.min(...ys) - 20, x1 = Math.max(...xs) + 20, y1 = Math.max(...ys) + 20;
+  svg.setAttribute("viewBox", `${x0} ${y0} ${x1 - x0} ${y1 - y0}`); svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  for (const n of nodes) el("rect", {class: "tn", x: n.x, y: n.y, width: W, height: H, rx: 6}, svg);
+  el("rect", {class: "tv", x: vx0, y: vy0, width: vw, height: vh}, svg);
+  svg.onclick = ev => {
+    const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const w = pt.matrixTransform(svg.getScreenCTM().inverse());
+    view.x = r.width / 2 - w.x * view.k; view.y = r.height / 2 - w.y * view.k; applyView();
+  };
+}
+function arm(k) { disarm(); armed = k; document.querySelector(`.pal[data-kind="${k}"]`).classList.add("armed"); $("stage").classList.add("placing"); toast(`Click the canvas to place ${M[k].label}`); }
+function disarm() { armed = null; document.querySelectorAll(".pal.armed").forEach(e => e.classList.remove("armed")); $("stage").classList.remove("placing"); }
+$("stage").addEventListener("dragover", ev => ev.preventDefault());
+$("stage").addEventListener("drop", ev => { ev.preventDefault(); const k = ev.dataTransfer.getData("text/kind"); if (M[k]) { const p = toWorld(ev); addNode(k, p.x - W / 2, p.y - H / 2); } });
+function uniqueName(base) {
+  const names = new Set(allNodes().map(n => n.props.name));
+  let i = 1; while (names.has(`${base} ${i}`)) i++;
+  return `${base} ${i}`;
+}
+let autoConnect = true;
+try { autoConnect = localStorage.getItem("simcore.autoconnect") !== "0"; } catch (e) {}
+function addNode(kind, x, y) {
+  if (anim) return;
+  const n = {id: String(nextId++), type: kind, x: snap(x), y: snap(y), props: defaults(kind)};
+  n.props.name = uniqueName(M[kind].label);
+  if (kind === "station") n.props.station = n.props.name;
+  // Arena's Auto-Connect: the selected module's first free exit goes to the new module
+  const from = autoConnect && sel.size === 1 && !SOURCE.has(kind) ? byId([...sel][0]) : null;
+  const port = from && portsOf(from).find(pt => !G().links.some(l => l.from === from.id && l.port === pt));
+  change(() => {
+    G().nodes.push(n);
+    if (port) G().links.push({from: from.id, to: n.id, port});
+    sel = new Set([n.id]); selLink = null;
+  });
+}
+function showAuto() { $("bauto").setAttribute("aria-pressed", String(autoConnect)); $("bauto").classList.toggle("on", autoConnect); }
+$("bauto").onclick = () => { autoConnect = !autoConnect; try { localStorage.setItem("simcore.autoconnect", autoConnect ? "1" : "0"); } catch (e) {} showAuto(); toast(`Auto-Connect ${autoConnect ? "on" : "off"}`); };
+showAuto();
+
+// ======================= canvas geometry, pan & zoom =======================
+const snap = v => Math.round(v / GRID) * GRID;
+function applyView() { $("world").setAttribute("transform", `translate(${view.x},${view.y}) scale(${view.k})`); drawThumb(); }
+function toWorld(ev) { const r = $("canvas").getBoundingClientRect(); return {x: (ev.clientX - r.left - view.x) / view.k, y: (ev.clientY - r.top - view.y) / view.k}; }
+function zoomAt(f, cx, cy) {
+  const k = Math.min(3, Math.max(0.2, view.k * f)); f = k / view.k;
+  view.x = cx - (cx - view.x) * f; view.y = cy - (cy - view.y) * f; view.k = k; applyView();
+}
+$("canvas").addEventListener("wheel", ev => { ev.preventDefault(); const r = $("canvas").getBoundingClientRect(); zoomAt(Math.exp(-ev.deltaY * 0.0015), ev.clientX - r.left, ev.clientY - r.top); }, {passive: false});
+$("zin").onclick = () => { const r = $("canvas").getBoundingClientRect(); zoomAt(1.2, r.width / 2, r.height / 2); };
+$("zout").onclick = () => { const r = $("canvas").getBoundingClientRect(); zoomAt(1 / 1.2, r.width / 2, r.height / 2); };
+$("zfit").onclick = fit;
+function fit() {
+  const r = $("canvas").getBoundingClientRect();
+  if (!G().nodes.length || !r.width) { view = {x: 0, y: 0, k: 1}; applyView(); return; }
+  const xs = G().nodes.map(n => n.x), ys = G().nodes.map(n => n.y);
+  const x0 = Math.min(...xs) - 30, y0 = Math.min(...ys) - 30, x1 = Math.max(...xs) + W + 30, y1 = Math.max(...ys) + H + 50;
+  const k = Math.min(1.4, Math.max(0.2, Math.min(r.width / (x1 - x0), r.height / (y1 - y0))));
+  view = {k, x: (r.width - (x1 - x0) * k) / 2 - x0 * k, y: (r.height - (y1 - y0) * k) / 2 - y0 * k}; applyView();
+}
+function portPos(n, port) {
+  if (port === "in") return {x: n.x, y: n.y + H / 2};
+  const ports = portsOf(n), i = ports.indexOf(port), k = ports.length;
+  return {x: n.x + W, y: n.y + H * (i + 1) / (k + 1)};
+}
+function curve(a, b) {
+  const dx = Math.max(40, Math.abs(b.x - a.x) / 2);
+  return `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`;
+}
+const byId = id => G().nodes.find(n => n.id === id);
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (parent) parent.appendChild(e); return e; }
+
+// ======================= render =======================
+function render() {
+  const gl = $("links"), gn = $("nodes");
+  gl.innerHTML = ""; gn.innerHTML = "";
+  const probNodes = new Set(problems.filter(p => p.node).map(p => visibleId(p.node)));
+  G().links.forEach((l, i) => {
+    const a = byId(l.from), b = byId(l.to);
+    if (!a || !b || !portsOf(a).includes(l.port)) return;
+    const d = curve(portPos(a, l.port), portPos(b, "in"));
+    el("path", {class: "link" + (selLink === i ? " selected" : ""), d, "marker-end": "url(#arrow)"}, gl);
+    const hit = el("path", {d, stroke: "transparent", "stroke-width": 12, fill: "none", style: "cursor:pointer"}, gl);
+    hit.addEventListener("pointerdown", ev => { ev.stopPropagation(); if (anim) return; sel = new Set(); selLink = i; render(); renderSide(); });
+  });
+  for (const n of G().nodes) {
+    const d = M[n.type];
+    const g = el("g", {class: "node" + (sel.has(n.id) ? " selected" : "") + (probNodes.has(n.id) ? " problem" : ""), transform: `translate(${n.x},${n.y})`}, gn);
+    g.dataset.id = n.id;
+    el("rect", {class: "body", width: W, height: H, rx: n.type === "decide" ? 2 : 8}, g);
+    el("rect", {x: 0, y: 0, width: 6, height: H, rx: 3, fill: d.color}, g);
+    el("text", {class: "kind", x: 14, y: 15}, g).textContent = d.label;
+    el("text", {x: 14, y: 32}, g).textContent = clipText(n.props.name || "", 19);
+    el("text", {class: "sub", x: 14, y: 47}, g).textContent = clipText(subtitle(n) || "", 22);
+    el("text", {class: "badge", x: W - 8, y: 15, "text-anchor": "end", id: "badge-" + n.id}, g);
+    el("rect", {x: W - 22, y: H - 14, width: 14, height: 8, rx: 2, id: "res-" + n.id, fill: "transparent"}, g);
+    g.addEventListener("pointerdown", ev => nodeDown(ev, n));
+    g.addEventListener("dblclick", () => {
+      if (n.type === "process" && n.props.type === "Submodel" && n.sub) return goLevel([...path, n.id]);
+      sideTab = "model"; sel = new Set([n.id]); renderSide();
+    });
+    if (!SOURCE.has(n.type) || n.type === "station") el("circle", {class: "port", cx: 0, cy: H / 2, r: 5}, g);
+    const ports = portsOf(n);
+    for (const port of ports) {
+      const pp = portPos({...n, x: 0, y: 0}, port);
+      const c = el("circle", {class: "port", cx: pp.x, cy: pp.y, r: 6}, g);
+      c.addEventListener("pointerdown", ev => startLink(ev, n, port));
+      if (ports.length > 1) el("text", {class: "portlabel", x: pp.x - 9, y: pp.y + 3, "text-anchor": "end"}, g).textContent = port;
+      if (ports.length > 1) el("text", {class: "portcount", x: pp.x + 9, y: pp.y - 5, id: `pc-${n.id}-${port}`}, g);
+    }
+  }
+}
+function clipText(s, n) { s = String(s); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+
+// ======================= pointer interaction =======================
+function nodeDown(ev, n) {
+  if (anim || ev.button !== 0) return;
+  ev.stopPropagation();
+  if (ev.shiftKey) { sel.has(n.id) ? sel.delete(n.id) : sel.add(n.id); selLink = null; render(); renderSide(); return; }
+  if (sheet && $("p-sheet").classList.contains("on") && $("bottom").classList.contains("open")) sheet = {kind: "module", type: n.type};
+  if (!sel.has(n.id) || sideTab !== "model") { sel = new Set([n.id]); selLink = null; sideTab = "model"; render(); renderSide(); }
+  const p0 = toWorld(ev), start = [...sel].map(id => { const m = byId(id); return [m, m.x, m.y]; });
+  let moved = false, before = snapshot();
+  const move = e => {
+    const p = toWorld(e), dx = p.x - p0.x, dy = p.y - p0.y;
+    if (!moved && Math.hypot(dx, dy) < 3) return;
+    moved = true;
+    for (const [m, x, y] of start) { m.x = snap(x + dx); m.y = snap(y + dy); }
+    render();
+  };
+  const up = () => {
+    removeEventListener("pointermove", move); removeEventListener("pointerup", up);
+    if (moved) { undo.push(before); redo = []; markDirty(); updateButtons(); }
+  };
+  addEventListener("pointermove", move); addEventListener("pointerup", up);
+}
+function startLink(ev, n, port) {
+  if (anim) return;
+  ev.stopPropagation(); ev.preventDefault();
+  const a = portPos(n, port);
+  const move = e => $("ghost").setAttribute("d", curve(a, toWorld(e)));
+  const up = e => {
+    removeEventListener("pointermove", move); removeEventListener("pointerup", up);
+    $("ghost").setAttribute("d", "");
+    const hit = document.elementFromPoint(e.clientX, e.clientY);
+    const tgt = hit && hit.closest && hit.closest(".node");
+    if (!tgt || tgt.dataset.id === n.id) return;
+    const t = byId(tgt.dataset.id);
+    if (has(t.type, "create", "sub_in")) { toast(`${M[t.type].label} modules have no input`); return; }
+    change(() => {
+      G().links = G().links.filter(l => !(l.from === n.id && l.port === port));
+      G().links.push({from: n.id, to: t.id, port});
+    }, {keepSide: true});
+  };
+  addEventListener("pointermove", move); addEventListener("pointerup", up);
+}
+$("canvas").addEventListener("pointerdown", ev => {
+  if (ev.target.closest(".node")) return;
+  if (armed && ev.button === 0) { const p = toWorld(ev); const k = armed; disarm(); addNode(k, p.x - W / 2, p.y - H / 2); return; }
+  if (ev.shiftKey && !anim) return bandSelect(ev);
+  // pan
+  const x0 = ev.clientX, y0 = ev.clientY, vx = view.x, vy = view.y; let moved = false;
+  const move = e => { if (Math.hypot(e.clientX - x0, e.clientY - y0) > 3) moved = true; view.x = vx + e.clientX - x0; view.y = vy + e.clientY - y0; applyView(); };
+  const up = () => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); if (!moved && !anim) { sel = new Set(); selLink = null; render(); renderSide(); } };
+  addEventListener("pointermove", move); addEventListener("pointerup", up);
+});
+function bandSelect(ev) {
+  const p0 = toWorld(ev), band = $("band");
+  const move = e => { const p = toWorld(e); band.setAttribute("x", Math.min(p.x, p0.x)); band.setAttribute("y", Math.min(p.y, p0.y)); band.setAttribute("width", Math.abs(p.x - p0.x)); band.setAttribute("height", Math.abs(p.y - p0.y)); };
+  const up = e => {
+    removeEventListener("pointermove", move); removeEventListener("pointerup", up);
+    const p = toWorld(e), x0 = Math.min(p.x, p0.x), x1 = Math.max(p.x, p0.x), y0 = Math.min(p.y, p0.y), y1 = Math.max(p.y, p0.y);
+    for (const n of G().nodes) if (n.x >= x0 && n.x + W <= x1 && n.y >= y0 && n.y + H <= y1) sel.add(n.id);
+    band.setAttribute("width", 0); band.setAttribute("height", 0); render(); renderSide();
+  };
+  addEventListener("pointermove", move); addEventListener("pointerup", up);
+}
+function deleteSelection() {
+  if (!sel.size && selLink === null) return;
+  change(() => {
+    if (selLink !== null) G().links.splice(selLink, 1);
+    G().nodes = G().nodes.filter(n => !sel.has(n.id));
+    G().links = G().links.filter(l => !sel.has(l.from) && !sel.has(l.to));
+    sel = new Set(); selLink = null;
+  });
+}
+function copySelection() {
+  if (!sel.size) return;
+  const nodes = G().nodes.filter(n => sel.has(n.id));
+  clip = {nodes: JSON.parse(JSON.stringify(nodes)), links: G().links.filter(l => sel.has(l.from) && sel.has(l.to)).map(l => ({...l}))};
+  toast(`Copied ${nodes.length} module${nodes.length > 1 ? "s" : ""}`);
+}
+function paste() {
+  if (!clip) return;
+  change(() => {
+    const map = {};
+    sel = new Set();
+    for (const n of clip.nodes) {
+      const c = JSON.parse(JSON.stringify(n));
+      c.id = String(nextId++); map[n.id] = c.id; c.x += 40; c.y += 40;
+      c.props.name = uniqueName(c.props.name.replace(/ \d+$/, ""));
+      if (c.type === "station") c.props.station = c.props.name;
+      G().nodes.push(c); sel.add(c.id);
+    }
+    for (const l of clip.links) G().links.push({...l, from: map[l.from], to: map[l.to]});
+    clip = {nodes: G().nodes.filter(n => sel.has(n.id)).map(n => JSON.parse(JSON.stringify(n))), links: clip.links.map(l => ({...l, from: map[l.from], to: map[l.to]}))};
+  });
+}
+addEventListener("keydown", ev => {
+  const typing = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
+  const mod = ev.ctrlKey || ev.metaKey;
+  if (mod && ev.key.toLowerCase() === "s") { ev.preventDefault(); save(); return; }
+  if (ev.key === "F5") { ev.preventDefault(); ev.shiftKey ? endRun() : go(); return; }
+  if (ev.key === "F10") { ev.preventDefault(); stepRun(); return; }
+  if (!$("setupdlg").hidden) { if (ev.key === "Escape") closeSetup(false); return; }
+  if (!$("scheddlg").hidden) { if (ev.key === "Escape") closeSchedEditor(false); return; }
+  if (!$("rowsdlg").hidden) { if (ev.key === "Escape") $("rowsclose").click(); return; }
+  if ((ev.key === "<" || ev.key === ">") && anim && !typing) { speedBase *= ev.key === ">" ? 1.25 : 0.8; $("aspeed").oninput(); return; }
+  if (ev.key === "Escape" && anim && anim.playing) { pauseRun(); return; }
+  if (typing) return;
+  if (ev.key === "Escape") { disarm(); sel = new Set(); selLink = null; render(); renderSide(); }
+  if (anim) return;
+  if (ev.key === "Delete" || ev.key === "Backspace") { ev.preventDefault(); deleteSelection(); }
+  else if (mod && ev.key.toLowerCase() === "z" && !ev.shiftKey) { ev.preventDefault(); doUndo(); }
+  else if (mod && (ev.key.toLowerCase() === "y" || (ev.key.toLowerCase() === "z" && ev.shiftKey))) { ev.preventDefault(); doRedo(); }
+  else if (mod && ev.key.toLowerCase() === "c") copySelection();
+  else if (mod && ev.key.toLowerCase() === "v") paste();
+  else if (mod && ev.key.toLowerCase() === "d") { ev.preventDefault(); copySelection(); paste(); }
+  else if (mod && ev.key.toLowerCase() === "a") { ev.preventDefault(); sel = new Set(G().nodes.map(n => n.id)); render(); renderSide(); }
+});
+
+// ======================= side panel =======================
+function stationNames() { return allNodes().filter(n => n.type === "station").map(n => n.props.station || n.props.name); }
+function refOptions(ref) {
+  if (ref === "stations") return stationNames();
+  if (ref === "pictures") return Object.keys(PICTURES);
+  if (ref === "queues") return [...new Set([...Object.keys(model.data.queues), ...allNodes().map(moduleQueue).filter(Boolean)])];
+  if (ref === "states") return [...new Set(Object.values(model.data.statesets).flatMap(s => (s.states || []).map(x => x.state)).filter(Boolean)
+                                            .concat(["Idle", "Busy", "Failed", "Inactive"]))];
+  return Object.keys(model.data[ref] || {});
+}
+function input(parent, kind, value, onChange, opts = {}) {
+  let e;
+  if (Array.isArray(kind)) {
+    e = document.createElement("select");
+    const opts2 = kind.includes(value ?? "") || value == null ? kind : [value, ...kind];
+    for (const c of opts2) { const o = document.createElement("option"); o.value = c; o.textContent = c === "" ? "(none)" : c; e.appendChild(o); }
+  } else if (kind.startsWith && kind.startsWith("ref:")) {
+    e = document.createElement("input");
+    const id = "dl-" + kind.slice(4) + Math.random().toString(36).slice(2, 7);
+    const dl = document.createElement("datalist"); dl.id = id;
+    for (const c of refOptions(kind.slice(4))) { const o = document.createElement("option"); o.value = c; dl.appendChild(o); }
+    e.setAttribute("list", id); e._datalist = dl;
+  } else if (kind === "multi") e = document.createElement("textarea");
+  else if (kind === "check") { e = document.createElement("input"); e.type = "checkbox"; e.checked = value === true || value === "true"; }
+  else if (kind === "color") { e = document.createElement("input"); e.type = "color"; }
+  else { e = document.createElement("input"); if (kind === "expr") e.className = "expr"; }
+  if (kind !== "check") e.value = kind === "color" ? (value || "#f59e0b") : (value ?? "");
+  if (opts.placeholder) e.placeholder = opts.placeholder;
+  const ev = (Array.isArray(kind) || kind === "check" || kind === "color") ? "change" : "input";
+  e.addEventListener(ev, () => onChange(kind === "check" ? e.checked : e.value));
+  parent.appendChild(e);
+  if (e._datalist) parent.appendChild(e._datalist);
+  return e;
+}
+let fieldSeq = 0;
+function labeled(parent, text, kind, value, onChange, opts = {}) {
+  const l = document.createElement("label"); l.textContent = text; parent.appendChild(l);
+  const e = input(parent, kind, value, onChange, opts);
+  e.id = "f" + (++fieldSeq); l.htmlFor = e.id;
+  if (opts.aria) e.setAttribute("aria-label", opts.aria);
+  return e;
+}
+let editTimer = null, editBase = null;
+function editProp(fn, rerenderSide) {   // typing edits are grouped into one undo step
+  if (editBase === null) editBase = snapshot();
+  fn(); markDirty(); render(); if (rerenderSide) renderSide();
+  clearTimeout(editTimer);
+  editTimer = setTimeout(() => { undo.push(editBase); redo = []; editBase = null; updateButtons(); scheduleValidate(); }, 500);
+}
+const WIDE = new Set(["value", "expression", "other", "condition", "named", "members", "initial_values", "distances", "segments"]);
+// Render a list of fields (Arena dialog prompts) for obj; show() hides prompts that do not apply.
+function renderFields(parent, obj, fields, opts = {}) {
+  for (const fd of fields) {
+    if (fd.show && !fd.show(obj, opts.parent)) continue;
+    if (fd.kind === "repeat") { renderRepeat(parent, obj, fd, opts); continue; }
+    const kind = typeof fd.kind === "function" ? fd.kind(obj) : fd.kind;
+    const structural = Array.isArray(kind) || kind === "check";
+    const ph = fd.placeholder ? fd.placeholder(opts.root || obj) : (fd.def === "@units" || typeof fd.def === "boolean" ? "" : String(fd.def ?? ""));
+    const cell = document.createElement("div");
+    cell.className = "fld" + (kind === "multi" || WIDE.has(fd.key) ? " wide" : "");
+    parent.appendChild(cell);
+    const aria = (opts.aria || "") + fd.label;
+    const onChange = opts.direct ? v => { obj[fd.key] = v; if (opts.onEdit) opts.onEdit(structural); }
+                                 : v => editProp(() => { obj[fd.key] = v; if (opts.onEdit) opts.onEdit(); }, structural);
+    if (kind === "color") {   // empty means "use the picture's colour"; ↺ clears an override
+      const e = labeled(cell, fd.label, "color", obj[fd.key] || (PICTURES[obj.initial_picture] || ["#f59e0b"])[0], onChange, {aria});
+      const wrap = document.createElement("div"); wrap.className = "colorrow"; e.replaceWith(wrap); wrap.appendChild(e);
+      const r = document.createElement("button"); r.className = "x"; r.textContent = obj[fd.key] ? "↺" : "auto";
+      r.title = "Use the picture's colour"; r.setAttribute("aria-label", "Reset " + aria); r.disabled = !obj[fd.key];
+      r.onclick = () => editProp(() => { obj[fd.key] = ""; }, true); wrap.appendChild(r);
+      continue;
+    }
+    if (kind === "check") {
+      const l = document.createElement("label"); l.className = "chk";
+      const e = input(l, "check", obj[fd.key], onChange); e.id = "f" + (++fieldSeq); e.setAttribute("aria-label", aria);
+      l.append(fd.label); cell.appendChild(l);
+    } else labeled(cell, fd.label, kind, obj[fd.key], onChange, {placeholder: ph, aria});
+  }
+}
+// Repeat group (Arena's Add/Edit/Delete lists): one card per row.
+function renderRepeat(parent, owner, fd, opts) {
+  const rows = owner[fd.key] ||= [];
+  const box = document.createElement("div"); box.className = "rep wide"; parent.appendChild(box);
+  const h = document.createElement("div"); h.className = "rephead"; h.textContent = `${fd.label} (${rows.length})`; box.appendChild(h);
+  rows.forEach((row, i) => {
+    const card = document.createElement("div"); card.className = "card"; box.appendChild(card);
+    const top = document.createElement("div"); top.className = "top"; card.appendChild(top);
+    const title = document.createElement("span"); title.className = "rtitle"; title.textContent = `${i + 1}. ${fd.title(row)}`; top.appendChild(title);
+    const btn = (txt, tip, fn, dis) => { const b = document.createElement("button"); b.className = "x"; b.textContent = txt; b.title = tip; b.setAttribute("aria-label", tip); b.disabled = !!dis; b.onclick = () => change(fn); top.appendChild(b); };
+    btn("↑", `Move ${fd.label} row ${i + 1} up`, () => rows.splice(i - 1, 0, ...rows.splice(i, 1)), i === 0);
+    btn("↓", `Move ${fd.label} row ${i + 1} down`, () => rows.splice(i + 1, 0, ...rows.splice(i, 1)), i === rows.length - 1);
+    btn("✕", `Delete ${fd.label} row ${i + 1}`, () => { rows.splice(i, 1); dropPort(owner, fd, i); });
+    const grid = document.createElement("div"); grid.className = "grid"; card.appendChild(grid);
+    renderFields(grid, row, fd.cols, {...opts, parent: owner, aria: `${fd.label} ${i + 1} `,
+      onEdit: () => { title.textContent = `${i + 1}. ${fd.title(row)}`; }});
+  });
+  const add = document.createElement("button"); add.className = "addrow"; add.textContent = "+ " + (fd.add || "Add");
+  add.onclick = () => change(() => rows.push(fillRows(fd.cols, {...fieldDefaults(fd.cols), ...clone((fd.def || [])[0] || {})})));
+  box.appendChild(add);
+}
+function dropPort(owner, fd, i) {   // deleting an N-way Decide row removes its exit and renumbers the later ones
+  const n = G().nodes.find(x => x.props === owner);
+  if (!n || n.type !== "decide" || !has(fd.key, "conditions", "percentages")) return;
+  G().links = G().links.filter(l => !(l.from === n.id && l.port === String(i + 1)))
+    .map(l => l.from === n.id && /^\d+$/.test(l.port) && +l.port > i + 1 ? {...l, port: String(+l.port - 1)} : l);
+}
+function renderSide() {
+  const s = $("side"), keep = s.scrollTop; s.innerHTML = "";
+  const tabs = document.createElement("div"); tabs.id = "sidetabs"; s.appendChild(tabs);
+  for (const [k, t] of [["model", sel.size === 1 ? "Module" : "Run setup"], ["data", "Data"]]) {
+    const b = document.createElement("button"); b.textContent = t; b.className = sideTab === k ? "on" : "";
+    b.onclick = () => { sideTab = k; renderSide(); }; tabs.appendChild(b);
+  }
+  if (sideTab === "data") renderData(s);
+  else if (sel.size === 1) renderModule(s, byId([...sel][0]));
+  else {
+    if (sel.size > 1) {
+      const p = document.createElement("p"); p.className = "hint"; p.textContent = `${sel.size} modules selected. Drag to move, Delete to remove, Ctrl+C/V to copy.`; s.appendChild(p);
+    }
+    renderRunSetup(s);
+  }
+  s.scrollTop = keep;
+  const ae = document.activeElement;   // keep the cell being typed in
+  const typingInSheet = ae && $("p-sheet").contains(ae) && ["INPUT", "TEXTAREA"].includes(ae.tagName) && ae.type !== "checkbox";
+  if (sheet && $("p-sheet").classList.contains("on") && !typingInSheet) renderSheet();
+  if (rowsDlg) renderRowsDlg();
+}
+function renderModule(s, n) {
+  const d = M[n.type];
+  const h = document.createElement("h2"); h.textContent = d.label + " module"; s.appendChild(h);
+  labeled(s, "Name", "text", n.props.name, v => editProp(() => {
+    const old = n.props.name, oq = moduleQueue(n); n.props.name = v;
+    const nq = moduleQueue(n), qs = model.data.queues;   // the module's own queue keeps its settings
+    if (oq && nq && oq !== nq && qs[oq] && !qs[nq]) { qs[nq] = qs[oq]; delete qs[oq]; }
+    if (n.type === "station" && (!n.props.station || n.props.station === old)) n.props.station = v;
+  }));
+  renderFields(s, n.props, d.fields, {root: n.props});
+  if (n.type === "process" && n.props.type === "Submodel") {
+    n.sub ||= newSub();
+    const hint = document.createElement("p"); hint.className = "hint";
+    hint.textContent = "The submodel's logic is drawn inside it: entities go in at the Entry Point and leave through an Exit Point to this module's exit. Double-click the module to open it.";
+    s.appendChild(hint);
+    const o = document.createElement("button"); o.textContent = "Open submodel ›"; o.onclick = () => goLevel([...path, n.id]); s.appendChild(o);
+  }
+  for (const pr of problems.filter(p => p.node === levelPrefix() + n.id || (p.node || "").startsWith(levelPrefix() + n.id + "/"))) {
+    const e = document.createElement("p"); e.className = "perr"; e.textContent = pr.message; s.appendChild(e);
+  }
+  const b = document.createElement("button"); b.textContent = "Delete module"; b.style.marginTop = "12px";
+  b.onclick = deleteSelection; s.appendChild(b);
+}
+function runSummary() {
+  const r = model.run, len = String(r.length ?? "").trim();
+  return [`${r.replications || 1} replication${+r.replications > 1 ? "s" : ""}`,
+          len ? `length ${len} ${String(r.length_units).toLowerCase()}` : "length infinite",
+          +r.warmup ? `warm-up ${r.warmup} ${String(r.warmup_units).toLowerCase()}` : "no warm-up",
+          `base unit ${model.time_units}`, r.terminating ? `ends when ${r.terminating}` : null, r.batch_run ? "batch run" : null].filter(Boolean).join(" · ");
+}
+function renderRunSetup(s) {
+  const h = document.createElement("h2"); h.textContent = "Run setup"; s.appendChild(h);
+  const d = document.createElement("p"); d.id = "runsum"; d.textContent = runSummary(); s.appendChild(d);
+  const b = document.createElement("button"); b.textContent = "⚙ Run Setup…"; b.onclick = () => openSetup(); s.appendChild(b);
+  const p = document.createElement("p"); p.className = "hint";
+  p.innerHTML = `Drag modules from the left, or click one then click the canvas. Drag from a port ● to a module to connect.<br>
+    <kbd>Del</kbd> delete · <kbd>Ctrl</kbd>+<kbd>Z</kbd>/<kbd>Y</kbd> undo/redo · <kbd>Ctrl</kbd>+<kbd>C</kbd>/<kbd>V</kbd>/<kbd>D</kbd> copy/paste/duplicate ·
+    <kbd>Shift</kbd>+click multi-select · <kbd>Shift</kbd>+drag box select · drag background to pan · wheel to zoom.<br>
+    Run: <kbd>F5</kbd> Go · <kbd>F10</kbd> Step · <kbd>Esc</kbd> Pause · <kbd>Shift</kbd>+<kbd>F5</kbd> End.<br>
+    Expressions use SIMAN syntax: EXPO(5), TRIA(1,2,4), NQ(Teller Service.Queue), TNOW, SchedValue(name).`;
+  s.appendChild(p);
+}
+// The Run Setup dialog edits a copy; OK or Apply puts it in the model (one undo step).
+let setupWork = null, setupTab = "Replication Parameters";
+function openSetup(tab) {
+  if (anim || runJob) return;
+  setupWork = {name: model.name, time_units: model.time_units, run: clone(model.run)};
+  if (tab) setupTab = tab;
+  $("setupdlg").hidden = false; renderSetup();
+  const first = $("setupbody").querySelector("input, select, textarea"); if (first) first.focus();
+}
+function renderSetup() {
+  const tabs = $("setuptabs"); tabs.innerHTML = "";
+  for (const t of Object.keys(SETUP)) {
+    const b = document.createElement("button"); b.textContent = t; b.className = t === setupTab ? "on" : "";
+    b.onclick = () => { setupTab = t; renderSetup(); }; tabs.appendChild(b);
+  }
+  const body = $("setupbody"); body.innerHTML = "";
+  const w = setupWork, fields = SETUP[setupTab];
+  const rerender = structural => { if (structural) renderSetup(); };
+  if (setupTab === "Replication Parameters") {
+    const pair = (keys) => {
+      const row = document.createElement("div"); row.className = "row"; body.appendChild(row);
+      for (const k of keys) { const c = document.createElement("div"); row.appendChild(c); renderFields(c, w.run, fields.filter(x => x.key === k), {direct: true, onEdit: rerender, aria: ""}); }
+    };
+    pair(["replications"]);
+    const fs = document.createElement("fieldset"); const lg = document.createElement("legend"); lg.textContent = "Initialize Between Replications"; fs.appendChild(lg); body.appendChild(fs);
+    for (const k of ["init_stats", "init_system"]) renderFields(fs, w.run, fields.filter(x => x.key === k).map(x => ({...x, label: x.label.split(": ")[1]})), {direct: true, onEdit: rerender, aria: "Initialize Between Replications: "});
+    pair(["warmup", "warmup_units"]); pair(["length", "length_units"]);
+    const row = document.createElement("div"); row.className = "row"; body.appendChild(row);
+    const c1 = document.createElement("div"), c2 = document.createElement("div"); row.append(c1, c2);
+    renderFields(c1, w.run, fields.filter(x => x.key === "hours_per_day"), {direct: true, onEdit: rerender, aria: ""});
+    labeled(c2, "Base Time Units", ["seconds", "minutes", "hours", "days"], w.time_units, v => { w.time_units = v; });
+    renderFields(body, w.run, fields.filter(x => x.key === "terminating"), {direct: true, onEdit: rerender, aria: ""});
+    const h = document.createElement("p"); h.className = "hint";
+    h.textContent = "Leave Replication Length blank for an infinite run; it then ends on the Terminating Condition, when Create modules stop, or when you press End.";
+    body.appendChild(h);
+  } else if (setupTab === "Project Parameters") {
+    labeled(body, "Project Title", "text", w.name, v => { w.name = v; });
+    renderFields(body, w.run, fields.filter(x => !x.key.startsWith("stats_")), {direct: true, onEdit: rerender, aria: ""});
+    const fs = document.createElement("fieldset"); const lg = document.createElement("legend"); lg.textContent = "Statistics Collection"; fs.appendChild(lg); body.appendChild(fs);
+    renderFields(fs, w.run, fields.filter(x => x.key.startsWith("stats_")).map(x => ({...x, label: x.label.split(": ")[1]})), {direct: true, onEdit: rerender, aria: "Statistics Collection: "});
+  } else {
+    renderFields(body, w.run, fields, {direct: true, onEdit: rerender, aria: ""});
+    if (setupTab === "Run Speed") { const h = document.createElement("p"); h.className = "hint"; h.textContent = "The speed slider under the canvas scales this during the animation."; body.appendChild(h); }
+  }
+}
+function closeSetup(apply) {
+  if ($("setupdlg").hidden) return;
+  if (apply) applySetup();
+  $("setupdlg").hidden = true; setupWork = null;
+}
+function applySetup() {
+  const w = setupWork;
+  change(() => { model.run = clone(w.run); model.name = w.name.trim() || "Model"; model.time_units = w.time_units; $("mname").value = model.name; }, {keepSide: false});
+  setupWork = {name: model.name, time_units: model.time_units, run: clone(model.run)};
+}
+$("bsetup").onclick = () => openSetup();
+$("setupok").onclick = () => closeSetup(true);
+$("setupcancel").onclick = () => closeSetup(false);
+$("setupapply").onclick = () => { applySetup(); renderSetup(); };
+$("setupdlg").addEventListener("pointerdown", ev => { if (ev.target === $("setupdlg")) closeSetup(false); });
+// Names used in modules appear in the data modules, as in Arena.
+function syncData() {
+  const add = (table, name, extra = {}) => {
+    name = String(name || "").trim();
+    if (name && !model.data[table][name]) model.data[table][name] = fillRows(T[table].fields, {...fieldDefaults(T[table].fields), ...extra});
+  };
+  for (const n of allNodes()) {
+    const p = n.props;
+    if (has(n.type, "process", "seize", "release") && p.type !== "Submodel" && !(n.type === "process" && p.action === "Delay"))
+      for (const r of p.resources || []) {
+        if (r.type === "Resource" && !model.data.sets[String(r.resource).trim()]) add("resources", r.resource);
+        if (r.save_attr && r.type === "Set") add("attributes", r.save_attr);
+      }
+    if (n.type === "create") add("entities", p.entity_type);
+    if (n.type === "batch") { add("entities", p.rep_type); if (p.rule === "By Attribute") add("attributes", p.attribute); }
+    if (n.type === "assign") for (const a of p.assignments || []) {
+      if (a.type === "Variable") add("variables", a.variable);
+      if (a.type === "Attribute") add("attributes", a.attribute);
+      if (a.type === "Entity Type") add("entities", a.entity_type);
+    }
+    if (n.type === "record" && p.type === "Time Interval") add("attributes", p.attribute);
+    if (n.type === "create" && p.type === "Schedule") add("schedules", p.schedule, {type: "Arrival", durations: [{value: "10", duration: "8"}]});
+  }
+  for (const r of Object.values(model.data.resources))
+    if (r.type === "Based on Schedule") add("schedules", r.schedule, {type: "Capacity"});
+  // like Arena, every module queue (e.g. "Triage.Queue") is listed; rows added this way
+  // disappear again with their module unless the user changed them
+  const live = new Set(allNodes().map(moduleQueue).filter(Boolean)), qd = fieldDefaults(T.queues.fields);
+  for (const q of live) add("queues", q, {auto: true});
+  for (const [q, row] of Object.entries(model.data.queues))
+    if (row.auto && !live.has(q) && T.queues.fields.every(f => row[f.key] === qd[f.key])) delete model.data.queues[q];
+}
+function renderData(s) {
+  syncData();
+  let group = null;
+  for (const [key, t] of Object.entries(T)) {
+    if (t.g !== group) { group = t.g; const h = document.createElement("h2"); h.textContent = group; s.appendChild(h); }
+    const rows = model.data[key];
+    const det = document.createElement("details"); det.className = "data"; det.open = Object.keys(rows).length > 0 || key === "resources";
+    det.dataset.table = key;
+    const sum = document.createElement("summary"); sum.textContent = `${t.label} (${Object.keys(rows).length})`; det.appendChild(sum);
+    const hint = document.createElement("div"); hint.className = "hint"; hint.textContent = t.hint; det.appendChild(hint);
+    for (const name of Object.keys(rows)) {
+      const row = rows[name], card = document.createElement("div"); card.className = "card"; det.appendChild(card);
+      const top = document.createElement("div"); top.className = "top"; card.appendChild(top);
+      const nameIn = input(top, "text", name, () => {});
+      nameIn.setAttribute("aria-label", `${t.label} name`);
+      nameIn.addEventListener("change", () => renameRow(key, name, nameIn.value.trim()));
+      const x = document.createElement("button"); x.className = "x"; x.textContent = "✕"; x.title = `Delete ${name}`;
+      x.onclick = () => change(() => delete rows[name]);
+      top.appendChild(x);
+      const grid = document.createElement("div"); grid.className = "grid"; card.appendChild(grid);
+      renderFields(grid, row, t.fields, {root: row, aria: `${name} `});
+      if (key === "schedules") {
+        const pv = schedPreview(row); if (pv) card.appendChild(pv);
+        const b = document.createElement("button"); b.textContent = "📊 Edit graphically…"; b.setAttribute("aria-label", `Edit ${name} graphically`);
+        b.onclick = () => openSchedEditor(name); card.appendChild(b);
+      }
+    }
+    const add = document.createElement("button"); add.textContent = `+ Add ${t.label}`;
+    add.onclick = () => change(() => {
+      let i = 1; while (rows[`${t.label} ${i}`]) i++;
+      rows[`${t.label} ${i}`] = fillRows(t.fields, fieldDefaults(t.fields));
+    });
+    det.appendChild(add);
+    s.appendChild(det);
+  }
+}
+function walkRefs(fields, obj, fn) {   // fn(obj, key, table) for every reference field
+  for (const fd of fields) {
+    if (fd.kind === "repeat") { for (const r of obj[fd.key] || []) walkRefs(fd.cols, r, fn); continue; }
+    const k = typeof fd.kind === "function" ? fd.kind(obj) : fd.kind;
+    if (typeof k === "string" && k.startsWith("ref:")) fn(obj, fd.key, k.slice(4));
+  }
+}
+function renameRow(key, old, nu) {
+  if (!nu || nu === old) return;
+  if (model.data[key][nu]) { toast(`"${nu}" already exists`); renderSide(); return; }
+  change(() => {
+    model.data[key] = Object.fromEntries(Object.entries(model.data[key]).map(([k, v]) => [k === old ? nu : k, v]));
+    const fix = (obj, k, table) => { if (table === key && obj[k] === old) obj[k] = nu; };
+    for (const n of allNodes()) walkRefs(M[n.type].fields, n.props, fix);           // modules follow the rename
+    for (const [tk, t] of Object.entries(T)) for (const row of Object.values(model.data[tk])) walkRefs(t.fields, row, fix);
+    for (const st of Object.values(model.data.sets))
+      st.members = String(st.members || "").split(/(,|\n)/).map(x => x.trim() === old ? x.replace(old, nu) : x).join("");
+  });
+}
+
+// ======================= spreadsheet view (Arena's lower model window) =======================
+// One row per data module entry, or per flowchart module of one type; prompts that do not
+// apply to a row are hatched, repeat groups open as "n rows".
+let sheet = null, rowsDlg = null;
+function openSheet(spec) {
+  sheet = spec;
+  document.querySelectorAll(".pal.data").forEach(e => e.classList.toggle("on", spec.kind === "data" && e.dataset.table === spec.key));
+  openPane("sheet"); renderSheet();
+}
+function sheetCell(td, obj, fd, aria, owner) {
+  const kind = typeof fd.kind === "function" ? fd.kind(obj) : fd.kind;
+  if (fd.show && !fd.show(obj, owner)) { td.className = "na"; td.title = "Does not apply"; return; }
+  if (kind === "repeat") {
+    const n = (obj[fd.key] || []).length;
+    const b = document.createElement("button"); b.className = "rows"; b.textContent = `${n} row${n === 1 ? "" : "s"}`;
+    b.setAttribute("aria-label", aria); b.onclick = () => openRowsDlg(obj, fd, aria);
+    td.appendChild(b); return;
+  }
+  const structural = Array.isArray(kind) || kind === "check";
+  const e = input(td, kind, kind === "color" ? (obj[fd.key] || (PICTURES[obj.initial_picture] || ["#f59e0b"])[0]) : obj[fd.key],
+                  v => editProp(() => { obj[fd.key] = v; }, structural),
+                  {placeholder: fd.placeholder ? fd.placeholder(obj) : (fd.def === "@units" || typeof fd.def === "boolean" ? "" : String(fd.def ?? ""))});
+  e.setAttribute("aria-label", aria);
+  if (kind === "multi") e.rows = 1;
+}
+function renderSheet() {
+  const pane = $("p-sheet"); if (!sheet) { pane.innerHTML = '<p class="hint">Click a data module (Entity, Queue, Resource, Variable, …) in the Project Bar to see its spreadsheet.</p>'; return; }
+  const keep = $("panes").scrollTop; pane.innerHTML = "";
+  const head = document.createElement("div"); head.className = "sheethead"; pane.appendChild(head);
+  let fields, rows, title, nameLabel = "Name";
+  if (sheet.kind === "data") {
+    const t = T[sheet.key]; fields = t.fields; title = `${t.label} - ${t.g}`;
+    if (sheet.key === "entities") nameLabel = "Entity Type";
+    syncData();
+    rows = Object.entries(model.data[sheet.key]).map(([name, row]) => ({name, row}));
+  } else {
+    const d = M[sheet.type]; fields = d.fields; title = `${d.label} - ${d.g}`;
+    rows = G().nodes.filter(n => n.type === sheet.type).map(n => ({name: n.props.name, row: n.props, node: n}));
+  }
+  head.innerHTML = `<b>${esc(title)}</b><span class="hint">${sheet.kind === "data" ? esc(T[sheet.key].hint) : "Every " + esc(M[sheet.type].label) + " module at this level. Click a row number to select the module."}</span>`;
+  const tbl = document.createElement("table"); tbl.className = "sheet"; pane.appendChild(tbl);
+  const tr0 = document.createElement("tr"); tbl.appendChild(tr0);
+  for (const h of ["", nameLabel, ...fields.map(f => f.label), ""]) { const th = document.createElement("th"); th.textContent = h; tr0.appendChild(th); }
+  rows.forEach(({name, row, node}, i) => {
+    const tr = document.createElement("tr"); tbl.appendChild(tr);
+    if (node && sel.has(node.id)) tr.className = "cur";
+    const idx = document.createElement("td"); idx.className = "idx"; idx.textContent = i + 1; tr.appendChild(idx);
+    if (node) { idx.style.cursor = "pointer"; idx.onclick = () => { sel = new Set([node.id]); sideTab = "model"; render(); renderSide(); centerOn(node); }; }
+    const tn = document.createElement("td"); tr.appendChild(tn);
+    const ni = input(tn, "text", name, () => {}); ni.setAttribute("aria-label", `${name} ${nameLabel}`);
+    if (sheet.kind === "data") ni.addEventListener("change", () => renameRow(sheet.key, name, ni.value.trim()));
+    else ni.addEventListener("input", () => editProp(() => { row.name = ni.value; }));
+    for (const fd of fields) { const td = document.createElement("td"); tr.appendChild(td); sheetCell(td, row, fd, `${name} ${fd.label}`); }
+    const tx = document.createElement("td"); tr.appendChild(tx);
+    if (sheet.kind === "data" && sheet.key === "schedules") {
+      const g = document.createElement("button"); g.className = "rows"; g.textContent = "📊"; g.title = "Edit graphically"; g.setAttribute("aria-label", `Edit ${name} graphically`);
+      g.onclick = () => openSchedEditor(name); tx.appendChild(g);
+    }
+    const x = document.createElement("button"); x.className = "rows"; x.textContent = "✕"; x.title = `Delete ${name}`; x.setAttribute("aria-label", `Delete ${name}`);
+    x.onclick = () => change(() => {
+      if (sheet.kind === "data") delete model.data[sheet.key][name];
+      else { G().nodes = G().nodes.filter(m => m !== node); G().links = G().links.filter(l => l.from !== node.id && l.to !== node.id); }
+    });
+    tx.appendChild(x);
+  });
+  const add = document.createElement("div"); add.className = "addrowline"; add.tabIndex = 0; add.setAttribute("role", "button");
+  if (sheet.kind === "data") {
+    const t = T[sheet.key];
+    add.textContent = "Double-click here to add a new row.";
+    const doAdd = () => change(() => { let i = 1; while (model.data[sheet.key][`${t.label} ${i}`]) i++; model.data[sheet.key][`${t.label} ${i}`] = fillRows(t.fields, fieldDefaults(t.fields)); });
+    add.ondblclick = doAdd; add.onkeydown = ev => { if (ev.key === "Enter") doAdd(); };
+  } else add.textContent = `Drag ${M[sheet.type].label} from the Project Bar onto the canvas to add one.`;
+  pane.appendChild(add);
+  $("panes").scrollTop = keep;
+}
+function openRowsDlg(obj, fd, title) { rowsDlg = {obj, fd, title}; $("rowsdlg").hidden = false; renderRowsDlg(); }
+function renderRowsDlg() {
+  if (!rowsDlg) return;
+  $("rowstitle").textContent = rowsDlg.title; const body = $("rowsbody"); body.innerHTML = "";
+  renderRepeat(body, rowsDlg.obj, rowsDlg.fd, {});
+}
+$("rowsclose").onclick = () => { $("rowsdlg").hidden = true; rowsDlg = null; if (sheet) renderSheet(); };
+
+// ======================= Graphical Schedule Editor (Arena's) =======================
+// Time slots of a fixed length; each holds a value. OK turns runs of equal values into
+// the Value/Duration rows of the Schedule module (Time Units = the slot length).
+const SLOTS = {"1 Second": ["Seconds", 1 / 3600], "1 Minute": ["Minutes", 1 / 60], "15 Minutes": ["Quarterhours", 0.25],
+               "30 Minutes": ["Halfhours", 0.5], "1 Hour": ["Hours", 1], "1 Day": ["Days", 24]};
+const SCHED_HOURS = {seconds: 1 / 3600, minutes: 1 / 60, quarterhours: 0.25, halfhours: 0.5, hours: 1, days: 24};
+let gs = null;
+function slotsOf(row, slotHours) {   // durations -> slot values, or null if they are not whole slots
+  const out = [];
+  const rows = (row.durations || []).filter(r => String(r.value ?? "").trim() !== "");
+  const uh = SCHED_HOURS[String(row.units || "Hours").toLowerCase()] || 1;
+  for (const [i, r] of rows.entries()) {
+    const v = Number(r.value), dtext = String(r.duration ?? "").trim();
+    if (!isFinite(v)) return null;
+    if (!dtext) { if (i !== rows.length - 1) return null; out.push(v); return {slots: out, remain: true}; }
+    const n = Number(dtext) * uh / slotHours;
+    if (!isFinite(n) || n <= 0 || Math.abs(n - Math.round(n)) > 1e-9) return null;
+    for (let k = 0; k < Math.round(n); k++) out.push(v);
+  }
+  return {slots: out, remain: false};
+}
+function schedPreview(row) {
+  const sh = SCHED_HOURS[String(row.units || "Hours").toLowerCase()] || 1, rs = slotsOf(row, sh);
+  if (!rs || !rs.slots.length) return null;
+  const n = Math.min(rs.slots.length, 400), max = Math.max(1, ...rs.slots);
+  const svg = document.createElementNS(NS, "svg"); svg.setAttribute("class", "schedprev"); svg.setAttribute("viewBox", `0 0 ${n} 10`); svg.setAttribute("preserveAspectRatio", "none");
+  svg.setAttribute("aria-label", `Schedule preview: ${rs.slots.slice(0, 24).join(", ")}${rs.slots.length > 24 ? "…" : ""}`);
+  rs.slots.slice(0, n).forEach((v, i) => { if (v > 0) el("rect", {x: i + 0.06, y: 10 - 10 * v / max, width: 0.88, height: 10 * v / max}, svg); });
+  return svg;
+}
+function openSchedEditor(name) {
+  if (anim || runJob) return;
+  const row = model.data.schedules[name];
+  const slotName = row.ge_slot || Object.keys(SLOTS).find(k => SLOTS[k][0] === row.units) || "1 Hour";
+  const rs = slotsOf(row, SLOTS[slotName][1]);
+  if (!rs) { toast("This schedule has durations that are not whole time slots or are expressions — edit its rows instead"); return; }
+  const isCap = row.type === "Capacity";
+  gs = {name, row, slot: slotName, slots: rs.slots.slice(), remain: rs.remain || String(row.end_logic).startsWith("Remain"),
+        length: Math.max(rs.slots.length, 1), range: +row.ge_range || (slotName === "1 Hour" ? 24 : 30), offset: 0, speed: +row.ge_speed || 1,
+        max: +row.ge_max || Math.max(isCap ? 5 : 10, Math.ceil(Math.max(0, ...rs.slots) * 1.25)), snap: +row.ge_snap || 1,
+        hover: -1, optsOpen: false};
+  $("schedtitle").textContent = `Graphical Schedule Editor — ${name} (${row.type}${row.type === "Arrival" ? ", arrivals per hour" : ""})`;
+  $("scheddlg").hidden = false; renderGsOpts(); renderGsFill(); drawGs();
+}
+function gsSlotLabel(i) {   // calendar time of slot i, Arena-style: Day N hh:mm
+  const h = i * SLOTS[gs.slot][1], day = Math.floor(h / 24) + 1, rem = h - (day - 1) * 24;
+  if (gs.slot === "1 Day") return `Day ${day}`;
+  const hh = Math.floor(rem), mm = Math.floor((rem - hh) * 60 + 1e-9), ss = Math.round(((rem - hh) * 60 - mm) * 60);
+  return `Day ${day} ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}` + (gs.slot === "1 Second" ? `:${String(ss).padStart(2, "0")}` : "");
+}
+function drawGs() {
+  const svg = $("gschart"); svg.innerHTML = "";
+  const W0 = svg.clientWidth || 900, H0 = svg.clientHeight || 300, L0 = 36, B0 = 34, T0 = 8, R0 = 8;
+  svg.setAttribute("viewBox", `0 0 ${W0} ${H0}`);
+  const pw = W0 - L0 - R0, ph = H0 - T0 - B0, sw = pw / gs.range;
+  gs.geom = {L0, T0, pw, ph, sw};
+  // y grid
+  const step = gs.max <= 10 ? 1 : Math.ceil(gs.max / 10);
+  for (let v = 0; v <= gs.max + 1e-9; v += step) {
+    const y = T0 + ph - ph * v / gs.max;
+    el("line", {class: "gl", x1: L0, x2: L0 + pw, y1: y, y2: y}, svg);
+    el("text", {x: L0 - 4, y: y + 3, "text-anchor": "end"}, svg).textContent = +v.toFixed(3);
+  }
+  for (let k = 0; k < gs.range; k++) {
+    const i = gs.offset + k, x = L0 + k * sw;
+    if (i >= gs.length) el("rect", {class: "past", x, y: T0, width: sw, height: ph}, svg);
+    const newDay = SLOTS[gs.slot][1] < 24 && Math.abs(((i * SLOTS[gs.slot][1]) % 24)) < 1e-9;
+    el("line", {class: newDay ? "daygl" : "gl", x1: x, x2: x, y1: T0, y2: T0 + ph}, svg);
+    const v = gs.slots[i] || 0;
+    if (i < gs.length && v > 0) el("rect", {class: "bar" + (i === gs.hover ? " hover" : ""), x: x + 1, y: T0 + ph - ph * Math.min(v, gs.max) / gs.max, width: Math.max(1, sw - 2), height: ph * Math.min(v, gs.max) / gs.max}, svg);
+    const every = Math.ceil(28 / sw);
+    if (k % every === 0) {
+      const lab = gsSlotLabel(i).split(" ");
+      el("text", {x: x + 2, y: T0 + ph + 12}, svg).textContent = lab.length > 2 ? lab[2] : lab.join(" ");
+      if (newDay || k === 0) el("text", {x: x + 2, y: T0 + ph + 25}, svg).textContent = `Day ${lab[1]}`;
+    }
+  }
+  el("rect", {x: L0, y: T0, width: pw, height: ph, fill: "none", stroke: "var(--line)"}, svg);
+  const last = gs.offset + gs.range;
+  $("gsrange").textContent = `${gsSlotLabel(gs.offset)} – ${gsSlotLabel(last)} · schedule length ${gs.length} slot${gs.length > 1 ? "s" : ""} (${+(gs.length * SLOTS[gs.slot][1]).toFixed(4)} h), then ${gs.remain ? "remains at the last value" : "repeats"}`;
+}
+function gsHit(ev) {
+  const r = $("gschart").getBoundingClientRect(), g = gs.geom;
+  const x = (ev.clientX - r.left) * (($("gschart").viewBox.baseVal.width || r.width) / r.width), y = (ev.clientY - r.top) * (($("gschart").viewBox.baseVal.height || r.height) / r.height);
+  const k = Math.floor((x - g.L0) / g.sw);
+  if (k < 0 || k >= gs.range) return null;
+  let v = (g.T0 + g.ph - y) / g.ph * gs.max;
+  v = Math.max(0, Math.min(gs.max, Math.round(v / gs.snap) * gs.snap));
+  return {i: gs.offset + k, v: +v.toFixed(6)};
+}
+function gsSet(i, v) {
+  while (gs.slots.length <= i) gs.slots.push(0);
+  gs.slots[i] = v; gs.length = Math.max(gs.length, i + 1);
+}
+function gsStatus(h) {
+  if (!h) { $("gsstatus").textContent = "Click or drag on the chart to set values."; return; }
+  const cur = h.i < gs.length ? gs.slots[h.i] || 0 : "(beyond the schedule)";
+  $("gsstatus").textContent = `Timeslot ${h.i + 1}: ${gsSlotLabel(h.i)} – ${gsSlotLabel(h.i + 1)} · value ${cur} · click sets ${h.v}`;
+}
+$("gschart").addEventListener("pointerdown", ev => {
+  if (!gs) return;
+  ev.preventDefault(); $("gschart").setPointerCapture(ev.pointerId);
+  let h = gsHit(ev); if (h) { gsSet(h.i, h.v); drawGs(); gsStatus(h); }
+  let lastI = h ? h.i : null;
+  const move = e => {
+    const hh = gsHit(e); if (!hh) return;
+    if (lastI !== null) { const a = Math.min(lastI, hh.i), b = Math.max(lastI, hh.i); for (let i = a; i <= b; i++) gsSet(i, hh.v); }   // drag paints across
+    else gsSet(hh.i, hh.v);
+    lastI = hh.i; drawGs(); gsStatus(hh);
+  };
+  const up = () => { $("gschart").removeEventListener("pointermove", move); $("gschart").removeEventListener("pointerup", up); };
+  $("gschart").addEventListener("pointermove", move); $("gschart").addEventListener("pointerup", up);
+});
+$("gschart").addEventListener("pointermove", ev => { if (!gs || ev.buttons) return; const h = gsHit(ev); const i = h ? h.i : -1; if (i !== gs.hover) { gs.hover = i; drawGs(); } gsStatus(h); });
+$("gschart").addEventListener("pointerleave", () => { if (gs) { gs.hover = -1; drawGs(); gsStatus(null); } });
+$("gsstart").onclick = () => { gs.offset = 0; drawGs(); };
+$("gsback").onclick = () => { gs.offset = Math.max(0, gs.offset - gs.speed); drawGs(); };
+$("gsfwd").onclick = () => { gs.offset += gs.speed; drawGs(); };
+$("gsclear").onclick = () => { gs.slots = [0]; gs.length = 1; drawGs(); };
+$("gsoptbtn").onclick = () => { gs.optsOpen = !gs.optsOpen; renderGsOpts(); };
+function renderGsOpts() {
+  const box = $("gsopts"); box.hidden = !gs.optsOpen; $("gsoptbtn").setAttribute("aria-expanded", String(gs.optsOpen)); box.innerHTML = "";
+  if (!gs.optsOpen) return;
+  const grid = document.createElement("div"); grid.className = "grid4"; box.appendChild(grid);
+  const cell = () => { const c = document.createElement("div"); grid.appendChild(c); return c; };
+  labeled(cell(), "Time Slot Duration", Object.keys(SLOTS), gs.slot, v => {
+    // keep the calendar: re-cut the schedule into the new slot length (averaging when slots grow)
+    const oldH = SLOTS[gs.slot][1], newH = SLOTS[v][1], total = gs.length * oldH, n = Math.max(1, Math.round(total / newH));
+    const at = t => gs.slots[Math.min(gs.slots.length - 1, Math.floor(t / oldH + 1e-9))] || 0;
+    const ns = [];
+    for (let i = 0; i < n; i++) {
+      const k = Math.max(1, Math.round(newH / oldH)), vals = [];
+      for (let j = 0; j < (newH > oldH ? k : 1); j++) vals.push(at(i * newH + j * oldH));
+      ns.push(+(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(6));
+    }
+    gs.slot = v; gs.slots = ns; gs.length = n; gs.offset = 0; drawGs(); renderGsFill();
+  });
+  labeled(cell(), "Range (slots shown)", "text", gs.range, v => { const x = parseInt(v); if (x >= 10 && x <= 120) { gs.range = x; drawGs(); } });
+  labeled(cell(), "Calendar Speed", "text", gs.speed, v => { const x = parseInt(v); if (x >= 1) gs.speed = x; });
+  labeled(cell(), "Schedule Length (slots)", "text", gs.length, v => { const x = parseInt(v); if (x >= 1) { while (gs.slots.length < x) gs.slots.push(0); gs.length = x; drawGs(); } });
+  labeled(cell(), "Y Maximum", "text", gs.max, v => { const x = parseFloat(v); if (x > 0) { gs.max = x; drawGs(); } });
+  labeled(cell(), "Snap Spacing", "text", gs.snap, v => { const x = parseFloat(v); if (x > 0) gs.snap = gs.row.type === "Capacity" ? Math.max(1, Math.round(x)) : x; });
+  labeled(cell(), "End of Schedule", ["Repeat from Beginning", "Remain at Value"], gs.remain ? "Remain at Value" : "Repeat from Beginning", v => { gs.remain = v.startsWith("Remain"); drawGs(); });
+}
+// Quick fill: the same working hours on every day, e.g. 08:00–17:00 = 3
+function renderGsFill() {
+  const box = $("gsfill"); box.innerHTML = "";
+  if (SLOTS[gs.slot][1] >= 24) return;
+  const mk = (lab, val, w) => { const d = document.createElement("div"); box.appendChild(d); const e = labeled(d, lab, "text", val, () => {}); if (w) e.style.width = w; return e; };
+  const from = mk("Every day from", "08:00"), to = mk("to", "17:00"), val = mk("value", "1"), days = mk("for days", String(Math.max(1, Math.ceil(gs.length * SLOTS[gs.slot][1] / 24))));
+  const go = document.createElement("button"); go.textContent = "Fill"; box.appendChild(go);
+  const rest = document.createElement("label"); rest.className = "chk"; const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = true; rest.append(cb, "other hours = 0"); box.appendChild(rest);
+  const hm = t => { const m = /^(\d{1,2})(?::(\d{2}))?$/.exec(t.trim()); return m ? +m[1] + (+(m[2] || 0)) / 60 : NaN; };
+  go.onclick = () => {
+    const a = hm(from.value), b = hm(to.value), v = parseFloat(val.value), nd = parseInt(days.value), sh = SLOTS[gs.slot][1];
+    if (!(a >= 0 && b <= 24 && a < b && v >= 0 && nd >= 1)) { toast("Use times like 08:00 and 17:00, a value ≥ 0 and at least 1 day"); return; }
+    const per = Math.round(24 / sh);
+    for (let d = 0; d < nd; d++) for (let k = 0; k < per; k++) {
+      const t = k * sh, inside = t + 1e-9 >= a && t + 1e-9 < b;
+      if (inside) gsSet(d * per + k, v); else if (cb.checked) gsSet(d * per + k, 0);
+    }
+    gs.length = Math.max(gs.length, nd * per); gs.max = Math.max(gs.max, v); drawGs();
+  };
+}
+function closeSchedEditor(apply) {
+  if (!gs) return;
+  if (apply) {
+    const g = gs, rows = [];
+    const vals = g.slots.slice(0, g.length);
+    for (let i = 0; i < vals.length;) { let j = i; while (j < vals.length && vals[j] === vals[i]) j++; rows.push({value: String(vals[i]), duration: String(j - i)}); i = j; }
+    if (g.remain && rows.length) rows[rows.length - 1].duration = "";
+    change(() => {
+      Object.assign(g.row, {durations: rows, units: SLOTS[g.slot][0], end_logic: g.remain ? "Remain at Value" : "Repeat from Beginning",
+                            ge_slot: g.slot, ge_range: g.range, ge_max: g.max, ge_snap: g.snap, ge_speed: g.speed});
+    });
+  }
+  $("scheddlg").hidden = true; gs = null;
+}
+$("gsok").onclick = () => closeSchedEditor(true);
+$("gscancel").onclick = () => closeSchedEditor(false);
+addEventListener("resize", () => { if (gs) drawGs(); });
+
+// ======================= server calls =======================
+async function api(method, url, body) {
+  if (window.localApi) return await localApi(method, url, body);   // in-browser build (browser.js)
+  const r = await fetch(url, {method, headers: {"Content-Type": "application/json"}, body: body ? JSON.stringify(body) : undefined});
+  let j; try { j = await r.json(); } catch (e) { throw new Error(`server returned ${r.status}`); }
+  if (!r.ok) { const err = new Error(j.error || r.statusText); err.problems = j.problems; throw err; }
+  return j;
+}
+// ---------- menu bar: File / Edit / Tools / Help ----------
+function closeMenus(except) {
+  for (const m of document.querySelectorAll("#menubar .menu")) if (m !== except) {
+    m.querySelector(".mlist").hidden = true; m.querySelector(".mtop").setAttribute("aria-expanded", "false");
+  }
+}
+function openMenu(m, focusFirst) {
+  closeMenus(m);
+  const list = m.querySelector(".mlist"); list.hidden = false; m.querySelector(".mtop").setAttribute("aria-expanded", "true");
+  if (focusFirst) list.querySelector("button:not(:disabled)")?.focus();
+}
+for (const m of document.querySelectorAll("#menubar .menu")) {
+  const top = m.querySelector(".mtop"), list = m.querySelector(".mlist");
+  top.onclick = () => list.hidden ? openMenu(m) : closeMenus();
+  top.onmouseenter = () => { if (document.querySelector('#menubar .mtop[aria-expanded="true"]') && list.hidden) openMenu(m); };
+  top.onkeydown = ev => { if (ev.key === "ArrowDown") { ev.preventDefault(); openMenu(m, true); } };
+  list.addEventListener("click", ev => { if (ev.target.closest("button")) closeMenus(); });
+  list.addEventListener("keydown", ev => {
+    const items = [...list.querySelectorAll("button:not(:disabled)")], i = items.indexOf(document.activeElement);
+    if (ev.key === "ArrowDown") { ev.preventDefault(); items[(i + 1) % items.length]?.focus(); }
+    if (ev.key === "ArrowUp") { ev.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus(); }
+    if (ev.key === "Escape") { closeMenus(); top.focus(); }
+  });
+}
+document.addEventListener("pointerdown", ev => { if (!ev.target.closest("#menubar")) closeMenus(); });
+// for the other scripts: addMenuItem("tools", {id, label, kbd, action, sep})
+function addMenuItem(menu, {id, label, kbd, action, sep}) {
+  const list = document.querySelector(`#menubar .menu[data-menu="${menu}"] .mlist`);
+  if (sep && list.children.length) list.appendChild(document.createElement("hr"));
+  const b = document.createElement("button"); b.setAttribute("role", "menuitem"); if (id) b.id = id;
+  b.textContent = label; if (kbd) { const k = document.createElement("kbd"); k.textContent = kbd; b.appendChild(k); }
+  b.onclick = action; list.appendChild(b); return b;
+}
+
+// ---------- open / save ----------
+function showSaved() {
+  const st = $("savestate");
+  st.textContent = dirty ? "● belum disimpan" : "✓ tersimpan"; st.classList.toggle("unsaved", dirty);
+  st.title = dirty ? "Ada perubahan yang belum di-Save (File → Save, Ctrl+S)" : "";
+  $("bsave").classList.toggle("dirty", dirty);
+}
+let modelNames = [];
+async function refreshList() {
+  try { modelNames = await api("GET", "/api/models"); }
+  catch (e) { $("status").textContent = "server offline — edits are kept in this browser"; }
+  if (!$("opendlg").hidden) renderOpenList();
+}
+function renderOpenList() {
+  const q = $("openq").value.trim().toLowerCase(), box = $("openlist"); box.innerHTML = "";
+  const names = modelNames.filter(n => n.toLowerCase().includes(q));
+  if (!names.length) box.innerHTML = '<p class="hint" style="padding:8px">Tidak ada model.</p>';
+  for (const n of names) {
+    const b = document.createElement("button"); b.textContent = n; b.dataset.name = n;
+    b.onclick = () => { $("opendlg").hidden = true; openModel(n); }; box.appendChild(b);
+  }
+}
+function openDialog() { $("openq").value = ""; $("opendlg").hidden = false; renderOpenList(); refreshList(); $("openq").focus(); }
+$("openq").oninput = renderOpenList;
+$("openclose").onclick = () => $("opendlg").hidden = true;
+$("opendlg").addEventListener("keydown", ev => { if (ev.key === "Escape") $("opendlg").hidden = true; });
+async function openModel(n) {
+  try { const m = await upgraded(await api("GET", "/api/models/" + encodeURIComponent(n))); const prev = snapshot(); setModel(m); undo = [prev]; updateButtons(); dirty = false; showSaved(); requestAnimationFrame(fit); }
+  catch (e) { toast(e.message); }
+}
+async function save() {
+  try {
+    await api("PUT", "/api/models/" + encodeURIComponent(model.name), model);
+    dirty = false; showSaved(); refreshList(); toast(`Saved "${model.name}"`);
+  } catch (e) { toast(e.message); }
+}
+$("mname").addEventListener("change", () => change(() => model.name = $("mname").value.trim() || "Model", {keepSide: true}));
+$("bnew").onclick = () => {
+  const prev = snapshot();
+  setModel(blank()); undo = [prev]; updateButtons(); markDirty();
+  toast("New model — Ctrl+Z brings the previous one back");
+};
+$("bopen").onclick = openDialog;
+$("bsave").onclick = () => save();
+$("bundo").onclick = doUndo; $("bredo").onclick = doRedo;
+async function fileAction(v) {
+  const name = (model.name || "model").replace(/[^\w-]+/g, "_");
+  if (v === "json") download(name + ".json", JSON.stringify(model, null, 1), "application/json");
+  if (v === "yaml") { try { const {yaml} = await api("POST", "/api/yaml", model); download(name + ".yaml", yaml, "text/yaml"); } catch (e) { showProblems(e); } }
+  if (v === "import") $("fileinput").click();
+}
+$("mi-import").onclick = () => fileAction("import");
+$("mi-json").onclick = () => fileAction("json");
+$("mi-yaml").onclick = () => fileAction("yaml");
+$("fileinput").onchange = async () => {
+  const f = $("fileinput").files[0]; $("fileinput").value = ""; if (!f) return;
+  try { const m = await upgraded(JSON.parse(await f.text())); const prev = snapshot(); setModel(m); undo = [prev]; updateButtons(); markDirty(); requestAnimationFrame(fit); }
+  catch (e) { toast("Not an Atlverse Simulation model file: " + e.message); }
+};
+function download(name, text, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; a.click(); }
+$("btheme").onclick = () => {
+  const r = document.documentElement, dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = (r.dataset.theme || (dark ? "dark" : "light")) === "dark" ? "light" : "dark";
+  try { localStorage.setItem("simcore.theme", r.dataset.theme); } catch (e) {}
+};
+try { const t = localStorage.getItem("simcore.theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2600); }
+
+// ======================= validation & problems =======================
+let vTimer = null;
+function scheduleValidate() { clearTimeout(vTimer); vTimer = setTimeout(validate, 500); }
+async function validate() {
+  try { const r = await api("POST", "/api/validate", model); setProblems(r.problems || []); }
+  catch (e) { /* offline */ }
+}
+function setProblems(ps) {
+  problems = ps;
+  const errs = ps.filter(p => !/disposed/.test(p.message)).length;
+  $("pcount").textContent = ps.length ? `(${ps.length})` : "";
+  $("pcount").style.color = errs ? "var(--err)" : "var(--warn)";
+  const pane = $("p-problems"); pane.innerHTML = "";
+  if (!ps.length) pane.innerHTML = '<p class="hint">No problems found.</p>';
+  for (const p of ps) {
+    const d = document.createElement("div"); d.className = "prob" + (/disposed/.test(p.message) ? " w" : "");
+    const n = p.node && findDeep(String(p.node));
+    d.innerHTML = `<b>${/disposed/.test(p.message) ? "warning" : "error"}</b> ${n ? `<u>${esc(n.props.name)}</u>: ` : ""}${esc(p.message)}`;
+    if (n) d.onclick = () => {
+      const parts = String(p.node).split("/"); if (parts.slice(0, -1).join("/") !== path.join("/")) goLevel(parts.slice(0, -1));
+      sel = new Set([n.id]); sideTab = "model"; render(); renderSide(); centerOn(n);
+    };
+    pane.appendChild(d);
+  }
+  if (!anim) { render(); if (sel.size === 1) renderSide(); }
+}
+function centerOn(n) { const r = $("canvas").getBoundingClientRect(); view.x = r.width / 2 - (n.x + W / 2) * view.k; view.y = r.height / 2 - (n.y + H / 2) * view.k; applyView(); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c])); }
+function showProblems(e) { if (e.problems) setProblems(e.problems); openPane("problems"); toast(e.problems ? "Fix the problems listed below" : e.message); }
+
+// ======================= bottom panel =======================
+function openPane(name) {
+  $("bottom").classList.add("open");
+  for (const b of document.querySelectorAll("#tabs button[data-pane]")) b.classList.toggle("on", b.dataset.pane === name);
+  for (const d of document.querySelectorAll("#panes > div")) d.classList.toggle("on", d.id === "p-" + name);
+}
+for (const b of document.querySelectorAll("#tabs button[data-pane]")) b.onclick = () => { openPane(b.dataset.pane); if (b.dataset.pane === "sheet") renderSheet(); };
+$("tclose").onclick = () => $("bottom").classList.remove("open");
+
+// ======================= run & results =======================
+// Arena's run toolbar: Go, Step, Pause, Fast-Forward, End. The server runs every
+// replication first (End stops it there); then replication 1 is animated.
+let runJob = null, lastResults = null;
+function runUI() {
+  const computing = !!runJob, done = !!anim && anim.done, playing = !!anim && anim.playing && !done;
+  $("brun").disabled = computing || playing;
+  $("bpause").disabled = !playing;
+  $("bstep").disabled = computing || done;
+  $("bff").disabled = !anim || done;
+  $("bend").disabled = !computing && !anim;
+  $("bsetup").disabled = computing || !!anim;
+  document.querySelector(".runbar").classList.toggle("running", computing);
+  $("brun").textContent = computing ? "Running…" : "▶ Go";
+}
+async function go() {
+  if (runJob) return;
+  if (anim) {
+    if (anim.done) { stopAnim(); return startRun(false); }   // Go after the end starts a new run
+    anim.playing = true; anim.last = performance.now(); runUI(); return;
+  }
+  await startRun(false);
+}
+// A run is computed before it is animated; this panel shows how far it is (long runs in
+// the browser build can take a minute or more).
+const SEC = {Seconds: 1, Minutes: 60, Hours: 3600, Days: 86400};
+function runLengthBase() {   // replication length in base time units, or 0 if not set
+  const r = model.run, len = parseFloat(r.length), base = SEC[String(model.time_units).replace(/^./, c => c.toUpperCase())] || 60;
+  return len > 0 ? len * (SEC[r.length_units] || base) / base : 0;
+}
+function showRunProgress(pr) {
+  const box = $("runprog"); box.hidden = false;
+  const job = runJob; if (!job) return;
+  job.t0 ||= performance.now();
+  const el = (performance.now() - job.t0) / 1000, total = runLengthBase();
+  let frac = null, line = $("status").textContent || "Menyiapkan…";
+  if (pr) {
+    const reps = pr.reps || 1;
+    frac = total ? Math.min(1, ((pr.rep - 1) + Math.min(1, pr.time / total)) / reps) : null;
+    line = `Replikasi ${pr.rep} dari ${reps} · t = ${fmt(pr.time)}${total ? " / " + fmt(total) : ""} ${model.time_units}`;
+  }
+  $("rpbar").style.width = frac === null ? "0" : (frac * 100).toFixed(1) + "%";
+  $("rpbar").parentElement.classList.toggle("indet", frac === null);
+  $("rppct").textContent = frac === null ? "" : Math.round(frac * 100) + "%";
+  $("rpline").textContent = line;
+  const left = frac > 0.03 ? el * (1 - frac) / frac : null;
+  $("rptime").textContent = `${Math.round(el)} detik berjalan` + (left !== null && frac < 1 ? ` · sekitar ${left < 60 ? Math.ceil(left) + " detik" : Math.ceil(left / 60) + " menit"} lagi` : "");
+}
+function hideRunProgress() { $("runprog").hidden = true; }
+async function startRun(paused) {
+  closeSetup(false);
+  const id = Math.random().toString(36).slice(2, 12);
+  runJob = {id, ended: false};
+  runUI();
+  const r = model.run, reps = parseInt(r.replications) || 1;
+  $("status").textContent = `Running replication 1 of ${reps}…`;
+  showRunProgress(null);
+  const poll = setInterval(async () => {
+    try {
+      const pr = await api("GET", `/api/progress?id=${id}`);
+      if (pr.running && runJob) $("status").textContent = `Running replication ${pr.rep} of ${pr.reps} · t = ${fmt(pr.time)} ${model.time_units}`;
+      if (runJob) showRunProgress(pr.running ? pr : null);
+    } catch (e) { /* the run itself reports errors */ }
+  }, 400);
+  try {
+    const res = await api("POST", `/api/run?id=${id}`, model);
+    setProblems(res.warnings || []);
+    const ended = res.stopped ? `Ended by you at replication ${res.replications_done} of ${reps}, t = ${fmt(res.replications[res.replications.length - 1].time)} ${model.time_units}. ` : "";
+    res.info = ended + (r.batch_run ? "Batch run (no animation)" : `${res.anim.length.toLocaleString()} animation events` + (res.anim_truncated ? " (truncated)" : ""));
+    if (runJob.ended || r.batch_run || !res.anim.length) {
+      publishResults(res);
+      toast(res.stopped ? "Run ended — the results so far are in the Summary" : "Run finished");
+    } else {
+      // like Arena, the reports come when the run is over: here, when the animation reaches the end
+      clearResults("The Summary and Report appear when the run ends. Fast-Forward skips to the end.");
+      startAnim(res, paused);
+    }
+  } catch (e) { showProblems(e); }
+  finally { clearInterval(poll); runJob = null; $("status").textContent = ""; hideRunProgress(); runUI(); }
+}
+function publishResults(res) {
+  lastResults = res; renderReportsPanel();
+  $("p-report").firstElementChild.textContent = res.report;
+  renderSummary(res);
+  $("rinfo").textContent = res.info || "";
+  openPane("summary");
+}
+function clearResults(msg) {
+  lastResults = null; renderReportsPanel();
+  $("p-summary").innerHTML = `<p class="hint">${esc(msg)}</p>`;
+  $("p-report").firstElementChild.textContent = msg;
+  $("rinfo").textContent = "";
+}
+async function endRun() {
+  if (runJob) { runJob.ended = true; $("status").textContent = "Ending the run…"; try { await api("POST", `/api/stop?id=${runJob.id}`); } catch (e) {} return; }
+  if (anim) {
+    if (!anim.published) { clearResults("The run was ended before it finished, so there are no results. Use Fast-Forward to finish it."); toast("Run ended before it finished — no report"); }
+    stopAnim(); render(); renderSide();
+  }
+}
+function pauseRun() { if (anim && anim.playing) { anim.playing = false; runUI(); } }
+function stepRun() {
+  if (runJob) return;
+  if (!anim) return startRun(true);
+  anim.playing = false;
+  if (anim.i < anim.ev.length) {
+    const t = anim.ev[anim.i][0];
+    anim.t = Math.max(anim.t, t);
+    while (anim.i < anim.ev.length && anim.ev[anim.i][0] <= t) apply(anim.ev[anim.i++]);
+  } else anim.t = anim.end;
+  showClock(); runUI();
+}
+function fastForward() {
+  if (!anim || anim.done) return;
+  while (anim.i < anim.ev.length) apply(anim.ev[anim.i++]);
+  anim.t = anim.end; anim.playing = false; showClock(); runUI();
+}
+$("brun").onclick = go;
+$("bpause").onclick = pauseRun;
+$("bstep").onclick = stepRun;
+$("bff").onclick = fastForward;
+$("bend").onclick = endRun;
+$("rpend").onclick = endRun;
+const fmt = v => typeof v === "number" ? (Math.abs(v) >= 1e4 ? v.toFixed(0) : +v.toFixed(4)) : (v ?? "–");
+function table(parent, title, cols, rows) {
+  if (!rows.length) return;
+  const h = document.createElement("h2"); h.textContent = title; parent.appendChild(h);
+  const t = document.createElement("table"); t.className = "res";
+  t.innerHTML = "<tr>" + cols.map(c => `<th>${typeof termHtml === "function" ? termHtml(c) : esc(c)}</th>`).join("") + "</tr>" + rows.map(r => "<tr>" + r.map(c => `<td>${esc(fmt(c))}</td>`).join("") + "</tr>").join("");
+  parent.appendChild(t);
+}
+function renderSummary(res) {
+  // Arena's Category Overview: Entity, Process, Queue, Resource and User Specified sections
+  const p = $("p-summary"); p.innerHTML = "";
+  const reps = res.replications, r = reps[0], n = reps.length, run = model.run;
+  const avg = (f) => { const v = reps.map(f).filter(x => typeof x === "number"); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : "–"; };
+  const tav = (k, what = "average") => avg(x => (x.tallies[k] || {})[what]);
+  const costing = run.stats_costing !== false;
+  const sec = (id, title) => { const h = document.createElement("h2"); h.id = id; h.textContent = title; h.style.fontSize = "13px"; h.style.color = "var(--ink)"; p.appendChild(h); };
+  const top = document.createElement("div"); top.id = "sum-top"; p.appendChild(top);
+  top.innerHTML = `<b>${esc(model.name)}</b> <span class="hint">· Replications: ${n} · Time units: ${esc(model.time_units)}${run.analyst ? " · Analyst: " + esc(run.analyst) : ""}${n > 1 ? " · values are averages over the replications" : ""}</span>`;
+
+  // Entity
+  const ents = run.stats_entities === false ? [] : Object.keys(r.entities.in_ || {});
+  if (ents.length) {
+    sec("sum-entity", "Entity");
+    const cats = [["VA", "va"], ["NVA", "nva"], ["Wait", "wait"], ["Transfer", "tran"], ["Other", "other"]];
+    const ename = t => t === "null" ? "(none)" : t;
+    table(p, "Time (per entity)", ["Entity", ...cats.map(c => `${c[0]} Time`), "Total Time"],
+      ents.map(t => [ename(t), ...cats.map(c => tav(`${t}.${c[1]}_time`)), tav(`${t}.TotalTime`)]));
+    if (costing) table(p, "Cost (per entity)", ["Entity", ...cats.map(c => `${c[0]} Cost`), "Total Cost"],
+      ents.map(t => [ename(t), ...cats.map(c => tav(`${t}.${c[1]}_cost`)), tav(`${t}.TotalCost`)]));
+    table(p, "Other", ["Entity", "Number In", "Number Out", "WIP (end)"],
+      ents.map(t => [ename(t), avg(x => x.entities.in_[t]), avg(x => x.entities.out[t]), avg(x => x.entities.wip[t])]));
+  }
+  // Process
+  const procs = allNodes().filter(nd => nd.type === "process" && nd.props.type !== "Submodel" && r.counters[`${nd.props.name}.NumberIn`] !== undefined).map(nd => nd.props.name);
+  if (procs.length) {
+    sec("sum-process", "Process");
+    const cats = ["VA", "NVA", "Wait", "Transfer", "Other"].filter(c => procs.some(pn => r.tallies[`${pn}.${c}TimePerEntity`]));
+    table(p, "Time per Entity", ["Process", ...cats.map(c => `${c} Time`), "Total Time", "Max Total Time"],
+      procs.map(pn => [pn, ...cats.map(c => tav(`${pn}.${c}TimePerEntity`)), tav(`${pn}.TotalTimePerEntity`), tav(`${pn}.TotalTimePerEntity`, "max")]));
+    const acc = (k) => avg(x => { const t = x.tallies[k]; return t && typeof t.average === "number" ? t.average * t.observations : undefined; });
+    table(p, "Accumulated Time", ["Process", ...cats.map(c => `Accum ${c} Time`)], procs.map(pn => [pn, ...cats.map(c => acc(`${pn}.${c}TimePerEntity`))]));
+    const ccats = ["VA", "NVA", "Wait", "Transfer", "Other"].filter(c => procs.some(pn => r.tallies[`${pn}.${c}CostPerEntity`]));
+    if (costing && ccats.length) table(p, "Cost per Entity", ["Process", ...ccats.map(c => `${c} Cost`), "Total Cost"],
+      procs.map(pn => [pn, ...ccats.map(c => tav(`${pn}.${c}CostPerEntity`)), tav(`${pn}.TotalCostPerEntity`)]));
+    table(p, "Other", ["Process", "Number In", "Number Out"], procs.map(pn => [pn, avg(x => x.counters[`${pn}.NumberIn`]), avg(x => x.counters[`${pn}.NumberOut`])]));
+  }
+  // Queue
+  const qs = Object.keys(r.queues).filter(q => !q.startsWith("__"));
+  if (qs.length) {
+    sec("sum-queue", "Queue");
+    table(p, "Time", ["Queue", "Waiting Time (avg)", "Half width", "Max Waiting Time"],
+      qs.map(q => [q, avg(x => x.queues[q].waiting_time.average), n > 1 ? (res.across[`queues.${q}`] || {}).half_width ?? r.queues[q].waiting_time.half_width : r.queues[q].waiting_time.half_width, avg(x => x.queues[q].waiting_time.max)]));
+    table(p, "Other", ["Queue", "Number Waiting (avg)", "Max Number Waiting"], qs.map(q => [q, avg(x => x.queues[q].number_waiting.average), avg(x => x.queues[q].number_waiting.max)]));
+  }
+  // Resource
+  const rk = Object.keys(r.resources);
+  if (rk.length) {
+    sec("sum-resource", "Resource");
+    const states = [...new Set(rk.flatMap(k => reps.flatMap(x => Object.keys((x.resources[k] || {}).states || {}))))];
+    const pct = v => typeof v === "number" ? `${(v * 100).toFixed(2)}%` : v;
+    table(p, "Usage", ["Resource", "Instantaneous Utilization", "Scheduled Utilization", "Number Busy", "Number Scheduled", "Total Number Seized",
+        ...states.map(st => `% ${st[0] + st.slice(1).toLowerCase()}`)],
+      rk.map(k => [k, pct(avg(x => x.resources[k].instantaneous_utilization)), pct(avg(x => x.resources[k].scheduled_utilization)),
+        avg(x => x.resources[k].number_busy), avg(x => x.resources[k].number_scheduled), avg(x => x.resources[k].times_used),
+        ...states.map(st => pct(avg(x => ((x.resources[k].states || {})[st] || {standard_percent: 0}).standard_percent / 100)))]));
+    if (costing) table(p, "Cost", ["Resource", "Busy Cost", "Idle Cost", "Usage Cost", "Total Cost"],
+      rk.map(k => [k, avg(x => x.resources[k].busy_cost), avg(x => x.resources[k].idle_cost), avg(x => x.resources[k].usage_cost),
+        avg(x => x.resources[k].busy_cost + x.resources[k].idle_cost + x.resources[k].usage_cost)]));
+  }
+  // User Specified (Record modules, variables with statistics)
+  const sys = /\.(nva_time|va_time|wait_time|tran_time|other_time|nva_cost|va_cost|wait_cost|tran_cost|other_cost|TotalTime|TotalCost|(VA|NVA|Wait|Transfer|Other|Total)(Time|Cost)PerEntity)$/;
+  const userT = Object.keys(r.tallies).filter(k => !sys.test(k));
+  const userC = Object.keys(r.counters).filter(k => !/\.Number(In|Out)$/.test(k) || !procs.includes(k.replace(/\.Number(In|Out)$/, "")));
+  const userD = Object.keys(r.dstats || {}), userO = Object.keys(r.outputs || {}), userF = Object.keys(r.frequencies || {});
+  const hw = (k, single) => n > 1 ? (res.across[k] || {}).half_width ?? "–" : single;
+  if (userT.length || userC.length || userD.length || userO.length || userF.length) {
+    sec("sum-user", "User Specified");
+    table(p, "Tally", ["Statistic", "Average", "Half width", "Min", "Max", "Observations"],
+      userT.map(k => [k, tav(k), hw(`tallies.${k}`, r.tallies[k].half_width), tav(k, "min"), tav(k, "max"), tav(k, "observations")]));
+    table(p, "Time Persistent", ["Statistic", "Average", "Half width", "Min", "Max", "Final"], userD.map(k => [k, avg(x => (x.dstats[k] || {}).average),
+      hw(`dstats.${k}`, r.dstats[k].half_width), avg(x => (x.dstats[k] || {}).min), avg(x => (x.dstats[k] || {}).max), avg(x => (x.dstats[k] || {}).final)]));
+    table(p, "Counter", ["Counter", "Count", ...(n > 1 ? ["Half width"] : [])], userC.map(k => [k, avg(x => x.counters[k]), ...(n > 1 ? [hw(`counters.${k}`)] : [])]));
+    table(p, "Output", ["Output", "Value", ...(n > 1 ? ["Half width", "Min", "Max"] : [])], userO.map(k => [k, avg(x => (x.outputs || {})[k]),
+      ...(n > 1 ? [hw(`outputs.${k}`), (res.across[`outputs.${k}`] || {}).min, (res.across[`outputs.${k}`] || {}).max] : [])]));
+    for (const k of userF) {   // Arena's Frequencies: one table per statistic, categories in value order
+      const cats = [...new Set(reps.flatMap(x => Object.keys((x.frequencies || {})[k] || {})))]
+        .sort((a, b) => (isNaN(a) || isNaN(b)) ? String(a).localeCompare(String(b)) : a - b);
+      const fv = (c, w) => avg(x => (((x.frequencies || {})[k] || {})[c] || {number: 0, avg_time: 0, standard_percent: 0, restricted_percent: 0})[w]);
+      table(p, `Frequency: ${k}`, ["Category", "Number Obs", "Average Time", "Standard Percent", "Restricted Percent"],
+        cats.map(c => [c, fv(c, "number"), fv(c, "avg_time"), fv(c, "standard_percent"), fv(c, "restricted_percent")]));
+    }
+  }
+  const across = Object.entries(res.across || {}).filter(([k]) => !k.startsWith("queues."));
+  if (n > 1 && across.length) table(p, "Across replications (95% half width)", ["Statistic", "Average", "Half width", "Min", "Max"],
+    across.map(([k, a]) => [k.replace(/^(tallies|dstats|counters|outputs)\./, ""), a.average, a.half_width, a.min, a.max]));
+}
+
+// ======================= animation =======================
+let speedBase = 1;
+// Blank Run Speed: pace by how busy the model is, about 8 entity moves per second, so a
+// 10,000-hour run still shows entities moving; the slider, < and > speed it up.
+function autoSpeed(res) {
+  const moves = res.anim.filter(e => e[1] === "move").map(e => e[0]);
+  const k = Math.min(moves.length, 80);
+  const span = k > 1 ? moves[k - 1] - moves[0] : 0;
+  return span > 0 ? span / (k / 8) : Math.max(res.end_time, 1e-9) / 60;
+}
+function speedValue() { return speedBase * Math.pow(10, ($("aspeed").value - 50) / 20); }
+$("aspeed").oninput = () => $("aspeedv").textContent = `${speedValue().toPrecision(2)} ${model.time_units}/s`;
+function startAnim(res, paused) {
+  stopAnim();
+  sel = new Set(); selLink = null; render();
+  const queueOfNode = {}, nodeOfRes = {};
+  eachNode((n, fid) => {
+    const q = moduleQueue(n); if (q) queueOfNode[fid] = q;
+    if (has(n.type, "process", "seize") && n.props.type !== "Submodel") for (const r of n.props.resources || []) {
+      const names = r.type === "Resource" ? [r.resource] : r.type === "Set" ? String((model.data.sets[r.set] || {}).members || "").split(/[,\n]/) : [];
+      for (const x of names) if (String(x).trim()) nodeOfRes[String(x).trim()] ??= fid;
+    }
+  });
+  anim = {res, ev: res.anim, i: 0, t: 0, end: res.end_time, playing: !paused, done: false, last: performance.now(), ents: new Map(), etype: new Map(),
+          epic: new Map(), queues: {}, queueOfNode, nodeOfRes, dots: new Map(), resFill: {}, born: {}, trans: {}, gone: {}};
+  $("anibar").classList.add("on");
+  const factor = parseFloat(model.run.anim_speed);   // Run Speed: base time units per second; blank = about a minute per run
+  speedBase = factor > 0 ? factor : autoSpeed(res); $("aspeed").value = 50; $("aspeed").oninput();
+  const n = res.replications.length;
+  $("runstate").textContent = n > 1 ? `animating replication 1 of ${n}` : "";
+  if (paused) stepRun();
+  showClock(); runUI();
+  requestAnimationFrame(tick);
+}
+function showClock() {
+  $("clock").textContent = `t = ${anim.t.toFixed(2)} ${model.time_units}`;
+  anim.done = anim.t >= anim.end && anim.i >= anim.ev.length;
+  if (anim.done) {
+    anim.playing = false;
+    if (!anim.published) { anim.published = true; publishResults(anim.res); toast("Run finished"); }
+  }
+}
+function stopAnim() {
+  anim = null; $("anibar").classList.remove("on"); $("ents").innerHTML = "";
+  document.querySelectorAll(".badge, .portcount").forEach(b => b.textContent = "");
+  document.querySelectorAll("[id^=res-]").forEach(r => r.setAttribute("fill", "transparent"));
+  runUI();
+}
+$("aexit").onclick = () => endRun();
+$("arestart").onclick = () => { if (anim) { const done = anim.published; startAnim(anim.res); anim.published = done; } };
+$("aexit").title = "Same as End";
+function apply(e) {
+  const [, kind, a, b, c, d] = e;
+  if (kind === "move") {
+    const prev = anim.ents.get(a);
+    if (prev === undefined) anim.born[c] = (anim.born[c] || 0) + 1;
+    else if (prev !== c) { const k = prev + ">" + c; anim.trans[k] = (anim.trans[k] || 0) + 1; }
+    anim.ents.set(a, c); anim.etype.set(a, b); anim.epic.set(a, d);
+  }
+  else if (kind === "dispose") { const at = anim.ents.get(a); if (at !== undefined) anim.gone[at] = (anim.gone[at] || 0) + 1; anim.ents.delete(a); }
+  else if (kind === "queue") anim.queues[a] = b;
+  else if (kind === "resource") {
+    const nid = anim.nodeOfRes[a];
+    if (nid) anim.resFill[nid] = b === "BUSY" || (b !== "IDLE" && c > 0 && b !== "FAILED") ? "var(--busy)" : b === "IDLE" ? "var(--idle)" : "var(--off)";
+  }
+}
+function tick(now) {   // keeps drawing while paused so stepped entities glide into place
+  if (!anim) return;
+  const dt = Math.max(0, Math.min(0.1, (now - anim.last) / 1000)); anim.last = now;   // rAF time can precede performance.now()
+  if (anim.playing) {
+    anim.t = Math.min(anim.end, anim.t + dt * speedValue());
+    while (anim.i < anim.ev.length && anim.ev[anim.i][0] <= anim.t) apply(anim.ev[anim.i++]);
+    if (anim.res.anim_truncated && anim.i >= anim.ev.length && anim.t < anim.end && !anim.cut) {
+      anim.cut = true;
+      $("runstate").textContent = `animation recorded up to t = ${fmt(anim.ev.length ? anim.ev[anim.ev.length - 1][0] : 0)}; the run itself went to the end (Fast-Forward for results)`;
+    }
+    showClock();
+    if (!anim.playing) runUI();
+  }
+  draw();
+  requestAnimationFrame(tick);
+}
+// Entity look: an Assign that changed Entity.Picture wins; else the type's colour, else its initial picture.
+function entityLook(type, pic) {
+  const et = model.data.entities[type] || {};
+  const init = et.initial_picture || "Picture.Report";
+  const [pc, shape] = PICTURES[pic || init] || PICTURES[init] || ["var(--entity)", "circle"];
+  if (pic && pic !== init) return [pc, shape];
+  return [et.color || pc, shape];
+}
+let tx0, ty0;
+function draw() {
+  const at = {}, pre = levelPrefix();
+  for (const [id, nid] of anim.ents) { const v = visibleId(nid); if (v !== null) (at[v] ??= []).push(id); }
+  for (const [fid, fill] of Object.entries(anim.resFill)) {
+    const v = visibleId(fid), r = v !== null && pre + v === fid && document.getElementById("res-" + v);
+    if (r) r.setAttribute("fill", fill);
+  }
+  for (const n of G().nodes) {
+    const b = document.getElementById("badge-" + n.id), fid = pre + n.id;
+    const q = anim.queues[anim.queueOfNode[fid]];
+    const here = (at[n.id] || []).length;
+    // what Arena shows on each module: Create number out, Dispose number disposed, Process WIP, Batch queue
+    let txt = here ? (q ? `${here} (q ${q})` : String(here)) : "";
+    if (n.type === "create") txt = String(anim.born[fid] || 0);
+    else if (n.type === "dispose") txt = String(anim.gone[fid] || 0);
+    else if (n.type === "batch") txt = String(q || 0);
+    else if (n.type === "process" && n.props.type !== "Submodel") txt = q ? `${here} (q ${q})` : String(here);
+    if (b) b.textContent = txt;
+    if (portsOf(n).length > 1) for (const l of G().links.filter(l => l.from === n.id)) {
+      const t = document.getElementById(`pc-${n.id}-${l.port}`); if (!t) continue;
+      let c = 0;
+      for (const [k, v] of Object.entries(anim.trans)) { const [from, to] = k.split(">"); if (from === fid && visibleId(to) === l.to) c += v; }
+      t.textContent = String(c);
+    }
+  }
+  const g = $("ents"), keep = new Set();
+  for (const [nid, ids] of Object.entries(at)) {
+    const n = byId(nid); if (!n) continue;
+    ids.slice(0, 30).forEach((id, k) => {
+      keep.add(id);
+      const tx = n.x + 10 + (k % 15) * 8.5, ty = n.y + H + 8 + Math.floor(k / 15) * 8.5;
+      const [fill, shape] = entityLook(anim.etype.get(id), anim.epic.get(id));
+      let c = anim.dots.get(id);
+      if (c && c.dataset.look !== fill + shape) { c.remove(); anim.dots.delete(id); tx0 = +c.dataset.x; ty0 = +c.dataset.y; c = null; }
+      if (!c) {
+        c = el(shape === "circle" ? "circle" : "path", {class: "ent", fill}, g);
+        c.dataset.x = tx0 ?? tx; c.dataset.y = ty0 ?? ty; c.dataset.look = fill + shape; c.dataset.shape = shape; anim.dots.set(id, c);
+      }
+      tx0 = ty0 = undefined;
+      const x = +c.dataset.x, y = +c.dataset.y, nx = x + (tx - x) * 0.25, ny = y + (ty - y) * 0.25;
+      c.dataset.x = nx; c.dataset.y = ny;
+      if (c.dataset.shape === "circle") { c.setAttribute("cx", nx); c.setAttribute("cy", ny); c.setAttribute("r", 3.5); }
+      else c.setAttribute("d", c.dataset.shape === "rect" ? `M${nx - 3.2},${ny - 3.2}h6.4v6.4h-6.4z` : `M${nx},${ny - 4.2}L${nx + 4.2},${ny}L${nx},${ny + 4.2}L${nx - 4.2},${ny}z`);
+    });
+  }
+  for (const [id, c] of anim.dots) if (!keep.has(id)) { c.remove(); anim.dots.delete(id); }
+}
+
+// ======================= start =======================
+addEventListener("beforeunload", () => { try { localStorage.setItem("simcore.autosave", snapshot()); } catch (e) {} });
+(async function init() {
+  let restored = null;
+  try { restored = localStorage.getItem("simcore.autosave"); } catch (e) {}
+  if (restored) { try { setModel(await upgraded(JSON.parse(restored))); toast("Restored your last session"); } catch (e) { setModel(sample()); } }
+  else setModel(sample());
+  applyView(); requestAnimationFrame(fit);
+  renderReportsPanel(); renderNavigate();
+  refreshList();
+})();
+</script>
+<script src="learn.js"></script>
+<script src="report.js"></script>
+<script src="scenarios.js"></script>
+<script src="analyzer.js"></script>
+<script src="plots.js"></script>
+</body>
+</html>

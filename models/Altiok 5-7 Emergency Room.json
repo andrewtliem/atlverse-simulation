@@ -1,0 +1,802 @@
+{
+ "version": 2,
+ "name": "Altiok 5-7 Emergency Room",
+ "time_units": "minutes",
+ "run": {
+  "replications": "1",
+  "length": "525600",
+  "warmup": "0",
+  "rng_mode": "arena",
+  "disable_randomness": false,
+  "length_units": "Minutes",
+  "warmup_units": "Minutes",
+  "init_stats": true,
+  "init_system": true,
+  "hours_per_day": "24",
+  "terminating": "",
+  "analyst": "andrew (123)",
+  "description": "",
+  "stats_costing": true,
+  "stats_entities": true,
+  "stats_resources": true,
+  "stats_queues": true,
+  "stats_processes": true,
+  "anim_speed": "",
+  "batch_run": false
+ },
+ "data": {
+  "entities": {
+   "Patient": {
+    "initial_picture": "Picture.Report",
+    "color": "",
+    "holding_cost": "0.0",
+    "initial_va": "0.0",
+    "initial_nva": "0.0",
+    "initial_wait": "0.0",
+    "initial_transfer": "0.0",
+    "initial_other": "0.0",
+    "report": true
+   },
+   "Administrator": {
+    "initial_picture": "Picture.Report",
+    "color": "",
+    "holding_cost": "0.0",
+    "initial_va": "0.0",
+    "initial_nva": "0.0",
+    "initial_wait": "0.0",
+    "initial_transfer": "0.0",
+    "initial_other": "0.0",
+    "report": true
+   }
+  },
+  "queues": {
+   "Wait for Doctor.Queue": {
+    "type": "Highest Attribute Value",
+    "attribute": "Criticality",
+    "shared": false,
+    "report": true
+   },
+   "Reception.Queue": {
+    "type": "First In First Out",
+    "attribute": "",
+    "shared": false,
+    "report": true,
+    "auto": true
+   },
+   "Triage.Queue": {
+    "type": "First In First Out",
+    "attribute": "",
+    "shared": false,
+    "report": true,
+    "auto": true
+   },
+   "Waiting Room.Queue": {
+    "type": "First In First Out",
+    "attribute": "",
+    "shared": false,
+    "report": true,
+    "auto": true
+   },
+   "Check Out.Queue": {
+    "type": "First In First Out",
+    "attribute": "",
+    "shared": false,
+    "report": true,
+    "auto": true
+   },
+   "Hold Until Triage Summons on call Doctor.Queue": {
+    "type": "First In First Out",
+    "attribute": "",
+    "shared": false,
+    "report": true,
+    "auto": true
+   },
+   "Hold Until Triage Dismisses On Call Doctor.Queue": {
+    "type": "First In First Out",
+    "attribute": "",
+    "shared": false,
+    "report": true,
+    "auto": true
+   }
+  },
+  "resources": {
+   "Receptionist": {
+    "type": "Fixed Capacity",
+    "capacity": "3",
+    "schedule": "",
+    "schedule_rule": "Wait",
+    "busy_per_hour": "0.0",
+    "idle_per_hour": "0.0",
+    "per_use": "0.0",
+    "stateset": "",
+    "initial_state": "",
+    "failures": [],
+    "report": true
+   },
+   "Doctor": {
+    "type": "Fixed Capacity",
+    "capacity": "2",
+    "schedule": "",
+    "schedule_rule": "Wait",
+    "busy_per_hour": "0.0",
+    "idle_per_hour": "0.0",
+    "per_use": "0.0",
+    "stateset": "",
+    "initial_state": "",
+    "failures": [],
+    "report": true
+   },
+   "Nurse": {
+    "type": "Fixed Capacity",
+    "capacity": "2",
+    "schedule": "",
+    "schedule_rule": "Wait",
+    "busy_per_hour": "0.0",
+    "idle_per_hour": "0.0",
+    "per_use": "0.0",
+    "stateset": "",
+    "initial_state": "",
+    "failures": [],
+    "report": true
+   }
+  },
+  "variables": {},
+  "schedules": {},
+  "sets": {},
+  "attributes": {
+   "Criticality": {
+    "initial_values": "0",
+    "rows": "",
+    "columns": "",
+    "data_type": "Real"
+   },
+   "ArrTime": {
+    "initial_values": "0",
+    "rows": "",
+    "columns": "",
+    "data_type": "Real"
+   }
+  },
+  "expressions": {},
+  "failures": {},
+  "statesets": {},
+  "statistics": {
+   "Distribution of Doctors": {
+    "type": "Frequency",
+    "frequency_type": "Value",
+    "expression": "NR(Doctor)",
+    "categories": [],
+    "resource": "",
+    "limit": "Infinite",
+    "initial_value": "0",
+    "report_label": ""
+   },
+   "Daily Throughput": {
+    "type": "Output",
+    "expression": "NC(Patient Departures) / (TFIN / 1440)",
+    "frequency_type": "Value",
+    "resource": "",
+    "limit": "Infinite",
+    "initial_value": "0",
+    "report_label": "",
+    "categories": []
+   }
+  },
+  "transporters": {},
+  "conveyors": {}
+ },
+ "nodes": [
+  {
+   "id": "1",
+   "type": "create",
+   "x": 40,
+   "y": 80,
+   "props": {
+    "name": "Patient Arrivals",
+    "entity_type": "Patient",
+    "type": "Random (Expo)",
+    "value": "10",
+    "units": "Minutes",
+    "entities_per_arrival": "1",
+    "max_arrivals": "Infinite",
+    "first_creation": "0.0",
+    "schedule": "",
+    "expression": "EXPO(1)"
+   }
+  },
+  {
+   "id": "2",
+   "type": "assign",
+   "x": 220,
+   "y": 80,
+   "props": {
+    "name": "Record Arrival Time",
+    "assignments": [
+     {
+      "type": "Attribute",
+      "attribute": "ArrTime",
+      "value": "TNOW",
+      "variable": "Variable 1",
+      "row": "1",
+      "column": "1",
+      "entity_type": "Entity 1",
+      "entity_picture": "Picture.Report",
+      "other": "J"
+     }
+    ]
+   }
+  },
+  {
+   "id": "3",
+   "type": "process",
+   "x": 400,
+   "y": 80,
+   "props": {
+    "name": "Reception",
+    "type": "Standard",
+    "action": "Seize Delay Release",
+    "priority": "Medium (2)",
+    "resources": [
+     {
+      "type": "Resource",
+      "resource": "Receptionist",
+      "quantity": "1",
+      "set": "",
+      "attribute": "",
+      "expression": "",
+      "rule": "Cyclical",
+      "save_attr": "",
+      "set_index": "1"
+     }
+    ],
+    "units": "Minutes",
+    "allocation": "Value Added",
+    "report": true,
+    "delay_type": "Uniform",
+    "minimum": "6",
+    "maximum": "12",
+    "priority_expr": "2",
+    "value": "1",
+    "std_dev": ".2",
+    "expression": "1"
+   }
+  },
+  {
+   "id": "4",
+   "type": "process",
+   "x": 580,
+   "y": 80,
+   "props": {
+    "name": "Triage",
+    "type": "Standard",
+    "action": "Seize Delay Release",
+    "priority": "Medium (2)",
+    "resources": [
+     {
+      "type": "Resource",
+      "resource": "Doctor",
+      "quantity": "1",
+      "set": "",
+      "attribute": "",
+      "expression": "",
+      "rule": "Cyclical",
+      "save_attr": "",
+      "set_index": "1"
+     }
+    ],
+    "units": "Minutes",
+    "allocation": "Value Added",
+    "report": true,
+    "delay_type": "Triangular",
+    "minimum": "3",
+    "value": "5",
+    "maximum": "15",
+    "priority_expr": "2",
+    "std_dev": ".2",
+    "expression": "1"
+   }
+  },
+  {
+   "id": "5",
+   "type": "decide",
+   "x": 760,
+   "y": 80,
+   "props": {
+    "name": "Critical?",
+    "type": "2-way by Chance",
+    "percent_true": "40",
+    "if_type": "Expression",
+    "named": "",
+    "row": "1",
+    "column": "1",
+    "is": ">=",
+    "value": "1",
+    "percentages": [
+     {
+      "percent": "50"
+     }
+    ],
+    "conditions": [
+     {
+      "if_type": "Expression",
+      "value": "",
+      "named": "",
+      "row": "1",
+      "column": "1",
+      "is": ">="
+     }
+    ]
+   }
+  },
+  {
+   "id": "6",
+   "type": "assign",
+   "x": 940,
+   "y": 20,
+   "props": {
+    "name": "Mark Critical",
+    "assignments": [
+     {
+      "type": "Attribute",
+      "attribute": "Criticality",
+      "value": "1",
+      "variable": "Variable 1",
+      "row": "1",
+      "column": "1",
+      "entity_type": "Entity 1",
+      "entity_picture": "Picture.Report",
+      "other": "J"
+     }
+    ]
+   }
+  },
+  {
+   "id": "7",
+   "type": "seize",
+   "x": 760,
+   "y": 220,
+   "props": {
+    "name": "Waiting Room",
+    "allocation": "Value Added",
+    "priority": "Medium (2)",
+    "resources": [
+     {
+      "type": "Resource",
+      "resource": "Nurse",
+      "quantity": "1",
+      "set": "",
+      "attribute": "",
+      "expression": "",
+      "rule": "Cyclical",
+      "save_attr": "",
+      "set_index": "1"
+     }
+    ],
+    "queue_type": "Queue",
+    "queue_name": "Waiting Room.Queue",
+    "priority_expr": "2",
+    "resource_state": "",
+    "queue_set": "",
+    "queue_set_index": "1",
+    "queue_attribute": "",
+    "queue_expression": ""
+   }
+  },
+  {
+   "id": "8",
+   "type": "delay",
+   "x": 940,
+   "y": 220,
+   "props": {
+    "name": "Move to Treatment Room",
+    "allocation": "Value Added",
+    "delay_time": "UNIF(1, 3)",
+    "units": "Minutes"
+   }
+  },
+  {
+   "id": "9",
+   "type": "delay",
+   "x": 1120,
+   "y": 220,
+   "props": {
+    "name": "Treatment by Nurse",
+    "allocation": "Value Added",
+    "delay_time": "UNIF(3, 10)",
+    "units": "Minutes"
+   }
+  },
+  {
+   "id": "10",
+   "type": "release",
+   "x": 1300,
+   "y": 220,
+   "props": {
+    "name": "Release Nurse",
+    "resources": [
+     {
+      "type": "Resource",
+      "resource": "Nurse",
+      "quantity": "1",
+      "set": "",
+      "attribute": "",
+      "expression": "",
+      "release_rule": "Last Member Seized",
+      "set_index": "1"
+     }
+    ]
+   }
+  },
+  {
+   "id": "11",
+   "type": "seize",
+   "x": 1300,
+   "y": 80,
+   "props": {
+    "name": "Wait for Doctor",
+    "allocation": "Value Added",
+    "priority": "Medium (2)",
+    "resources": [
+     {
+      "type": "Resource",
+      "resource": "Doctor",
+      "quantity": "1",
+      "set": "",
+      "attribute": "",
+      "expression": "",
+      "rule": "Cyclical",
+      "save_attr": "",
+      "set_index": "1"
+     }
+    ],
+    "queue_type": "Queue",
+    "queue_name": "Wait for Doctor.Queue",
+    "priority_expr": "2",
+    "resource_state": "",
+    "queue_set": "",
+    "queue_set_index": "1",
+    "queue_attribute": "",
+    "queue_expression": ""
+   }
+  },
+  {
+   "id": "12",
+   "type": "delay",
+   "x": 1480,
+   "y": 80,
+   "props": {
+    "name": "Treatment by Doctor",
+    "allocation": "Value Added",
+    "delay_time": "(Criticality == 1) * UNIF(20, 30) + (Criticality == 0) * UNIF(5, 10)",
+    "units": "Minutes"
+   }
+  },
+  {
+   "id": "13",
+   "type": "release",
+   "x": 1660,
+   "y": 80,
+   "props": {
+    "name": "Release Doctor",
+    "resources": [
+     {
+      "type": "Resource",
+      "resource": "Doctor",
+      "quantity": "1",
+      "set": "",
+      "attribute": "",
+      "expression": "",
+      "release_rule": "Last Member Seized",
+      "set_index": "1"
+     }
+    ]
+   }
+  },
+  {
+   "id": "14",
+   "type": "process",
+   "x": 1840,
+   "y": 80,
+   "props": {
+    "name": "Check Out",
+    "type": "Standard",
+    "action": "Seize Delay Release",
+    "priority": "Medium (2)",
+    "resources": [
+     {
+      "type": "Resource",
+      "resource": "Receptionist",
+      "quantity": "1",
+      "set": "",
+      "attribute": "",
+      "expression": "",
+      "rule": "Cyclical",
+      "save_attr": "",
+      "set_index": "1"
+     }
+    ],
+    "units": "Minutes",
+    "allocation": "Value Added",
+    "report": true,
+    "delay_type": "Uniform",
+    "minimum": "10",
+    "maximum": "20",
+    "priority_expr": "2",
+    "value": "1",
+    "std_dev": ".2",
+    "expression": "1"
+   }
+  },
+  {
+   "id": "15",
+   "type": "record",
+   "x": 2020,
+   "y": 80,
+   "props": {
+    "name": "Patient Sojourn Time",
+    "type": "Time Interval",
+    "attribute": "ArrTime",
+    "tally_name": "Patient Sojourn Time",
+    "value": "1",
+    "record_into_set": false,
+    "counter_name": "",
+    "counter_set": "",
+    "tally_set": "",
+    "set_index": "1"
+   }
+  },
+  {
+   "id": "16",
+   "type": "record",
+   "x": 2200,
+   "y": 80,
+   "props": {
+    "name": "Patient Departures",
+    "type": "Count",
+    "value": "1",
+    "counter_name": "Patient Departures",
+    "attribute": "Attribute 1",
+    "record_into_set": false,
+    "tally_name": "",
+    "counter_set": "",
+    "tally_set": "",
+    "set_index": "1"
+   }
+  },
+  {
+   "id": "17",
+   "type": "dispose",
+   "x": 2380,
+   "y": 80,
+   "props": {
+    "name": "Leave Facility",
+    "record_stats": true
+   }
+  },
+  {
+   "id": "20",
+   "type": "create",
+   "x": 40,
+   "y": 420,
+   "props": {
+    "name": "Dispatcher",
+    "entity_type": "Administrator",
+    "type": "Random (Expo)",
+    "value": "1",
+    "units": "Hours",
+    "entities_per_arrival": "1",
+    "max_arrivals": "1",
+    "first_creation": "0.0",
+    "schedule": "",
+    "expression": "EXPO(1)"
+   }
+  },
+  {
+   "id": "21",
+   "type": "hold",
+   "x": 240,
+   "y": 420,
+   "props": {
+    "name": "Hold Until Triage Summons On Call Doctor",
+    "type": "Scan for Condition",
+    "condition": "NQ(Triage.Queue) > 3",
+    "queue_type": "Queue",
+    "queue_name": "Hold Until Triage Summons on call Doctor.Queue",
+    "wait_value": "1",
+    "limit": "",
+    "queue_set": "",
+    "queue_set_index": "1",
+    "queue_attribute": "",
+    "queue_expression": ""
+   }
+  },
+  {
+   "id": "22",
+   "type": "assign",
+   "x": 440,
+   "y": 420,
+   "props": {
+    "name": "Summon Extra Doctor",
+    "assignments": [
+     {
+      "type": "Other",
+      "other": "MR(Doctor)",
+      "value": "MR(Doctor) + 1",
+      "variable": "Variable 1",
+      "row": "1",
+      "column": "1",
+      "attribute": "Attribute 1",
+      "entity_type": "Entity 1",
+      "entity_picture": "Picture.Report"
+     }
+    ]
+   }
+  },
+  {
+   "id": "23",
+   "type": "hold",
+   "x": 640,
+   "y": 420,
+   "props": {
+    "name": "Hold Until Triage Dismisses On Call Doctor",
+    "type": "Scan for Condition",
+    "condition": "NQ(Triage.Queue) == 0",
+    "queue_type": "Queue",
+    "queue_name": "Hold Until Triage Dismisses On Call Doctor.Queue",
+    "wait_value": "1",
+    "limit": "",
+    "queue_set": "",
+    "queue_set_index": "1",
+    "queue_attribute": "",
+    "queue_expression": ""
+   }
+  },
+  {
+   "id": "24",
+   "type": "assign",
+   "x": 840,
+   "y": 420,
+   "props": {
+    "name": "Dismiss Extra Doctor",
+    "assignments": [
+     {
+      "type": "Other",
+      "other": "MR(Doctor)",
+      "value": "MR(Doctor) - 1",
+      "variable": "Variable 1",
+      "row": "1",
+      "column": "1",
+      "attribute": "Attribute 1",
+      "entity_type": "Entity 1",
+      "entity_picture": "Picture.Report"
+     }
+    ]
+   }
+  }
+ ],
+ "links": [
+  {
+   "from": "1",
+   "to": "2",
+   "port": "out"
+  },
+  {
+   "from": "2",
+   "to": "3",
+   "port": "out"
+  },
+  {
+   "from": "3",
+   "to": "4",
+   "port": "out"
+  },
+  {
+   "from": "4",
+   "to": "5",
+   "port": "out"
+  },
+  {
+   "from": "5",
+   "to": "6",
+   "port": "true"
+  },
+  {
+   "from": "5",
+   "to": "7",
+   "port": "false"
+  },
+  {
+   "from": "6",
+   "to": "11",
+   "port": "out"
+  },
+  {
+   "from": "7",
+   "to": "8",
+   "port": "out"
+  },
+  {
+   "from": "8",
+   "to": "9",
+   "port": "out"
+  },
+  {
+   "from": "9",
+   "to": "10",
+   "port": "out"
+  },
+  {
+   "from": "10",
+   "to": "11",
+   "port": "out"
+  },
+  {
+   "from": "11",
+   "to": "12",
+   "port": "out"
+  },
+  {
+   "from": "12",
+   "to": "13",
+   "port": "out"
+  },
+  {
+   "from": "13",
+   "to": "14",
+   "port": "out"
+  },
+  {
+   "from": "14",
+   "to": "15",
+   "port": "out"
+  },
+  {
+   "from": "15",
+   "to": "16",
+   "port": "out"
+  },
+  {
+   "from": "16",
+   "to": "17",
+   "port": "out"
+  },
+  {
+   "from": "20",
+   "to": "21",
+   "port": "out"
+  },
+  {
+   "from": "21",
+   "to": "22",
+   "port": "out"
+  },
+  {
+   "from": "22",
+   "to": "23",
+   "port": "out"
+  },
+  {
+   "from": "23",
+   "to": "24",
+   "port": "out"
+  },
+  {
+   "from": "24",
+   "to": "21",
+   "port": "out"
+  }
+ ],
+ "meta": {
+  "id": "M-0765698F61",
+  "created": "2026-10-13T10:12:16.320Z",
+  "authors": [
+   {
+    "name": "andrew",
+    "nim": "123",
+    "kelas": "bpr",
+    "first": "2026-10-13T10:18:15.031Z",
+    "last": "2026-10-13T10:18:15.031Z"
+   }
+  ]
+ }
+}

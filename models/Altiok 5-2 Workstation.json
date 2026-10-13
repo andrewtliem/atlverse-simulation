@@ -1,0 +1,86 @@
+{
+ "version": 2,
+ "name": "Altiok 5-2 Workstation",
+ "time_units": "minutes",
+ "run": {
+  "replications": "1",
+  "length": "10000",
+  "length_units": "Hours",
+  "warmup": "0",
+  "warmup_units": "Hours",
+  "rng_mode": "arena",
+  "disable_randomness": false
+ },
+ "data": {
+  "resources": {
+   "Machine": {
+    "type": "Fixed Capacity",
+    "capacity": "1"
+   }
+  }
+ },
+ "nodes": [
+  {
+   "id": "1",
+   "type": "create",
+   "x": 40,
+   "y": 160,
+   "props": {
+    "name": "Create 1",
+    "entity_type": "Job",
+    "type": "Random (Expo)",
+    "value": "30",
+    "units": "Minutes",
+    "entities_per_arrival": "1",
+    "max_arrivals": "Infinite",
+    "first_creation": "0.0"
+   }
+  },
+  {
+   "id": "2",
+   "type": "process",
+   "x": 240,
+   "y": 160,
+   "props": {
+    "name": "Process 1",
+    "type": "Standard",
+    "action": "Seize Delay Release",
+    "priority": "Medium (2)",
+    "resources": [
+     {
+      "type": "Resource",
+      "resource": "Machine",
+      "quantity": "1"
+     }
+    ],
+    "units": "Minutes",
+    "allocation": "Value Added",
+    "report": true,
+    "delay_type": "Expression",
+    "expression": "EXPO(24)"
+   }
+  },
+  {
+   "id": "3",
+   "type": "dispose",
+   "x": 440,
+   "y": 160,
+   "props": {
+    "name": "Dispose 1",
+    "record_stats": true
+   }
+  }
+ ],
+ "links": [
+  {
+   "from": "1",
+   "to": "2",
+   "port": "out"
+  },
+  {
+   "from": "2",
+   "to": "3",
+   "port": "out"
+  }
+ ]
+}

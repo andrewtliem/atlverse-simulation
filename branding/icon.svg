@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<title>Atlverse Simulation</title>
+<rect width="64" height="64" rx="14" fill="#00509e"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="5" transform="translate(32 32) scale(.78) translate(-32 -32)">
+<path d="M7 49 L23 15 Q24.5 12 27.5 12 H28.5 Q31.5 12 33 15 L45 41 Q46.5 44 49.5 44 H50 L57 30" stroke="#ffffff" transform="translate(0 -7.5)"/>
+<path d="M7 49 L23 15 Q24.5 12 27.5 12 H28.5 Q31.5 12 33 15 L45 41 Q46.5 44 49.5 44 H50 L57 30" stroke="#ffc800"/>
+<path d="M7 49 L23 15 Q24.5 12 27.5 12 H28.5 Q31.5 12 33 15 L45 41 Q46.5 44 49.5 44 H50 L57 30" stroke="#6cc4ff" transform="translate(0 7.5)"/>
+</g></svg>

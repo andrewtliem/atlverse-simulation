@@ -1,0 +1,217 @@
+{
+ "version": 2,
+ "name": "Altiok 5-6 Two Processes",
+ "time_units": "hours",
+ "run": {
+  "replications": "1",
+  "length": "100000",
+  "length_units": "Hours",
+  "warmup": "0",
+  "warmup_units": "Hours",
+  "rng_mode": "arena",
+  "disable_randomness": false
+ },
+ "data": {
+  "resources": {
+   "Assembler": {
+    "type": "Fixed Capacity",
+    "capacity": "1"
+   },
+   "Painter": {
+    "type": "Fixed Capacity",
+    "capacity": "1"
+   }
+  }
+ },
+ "nodes": [
+  {
+   "id": "1",
+   "type": "create",
+   "x": 40,
+   "y": 160,
+   "props": {
+    "name": "Job Arrivals",
+    "entity_type": "Job",
+    "type": "Random (Expo)",
+    "value": "5",
+    "units": "Hours",
+    "entities_per_arrival": "1",
+    "max_arrivals": "Infinite",
+    "first_creation": "0.0"
+   }
+  },
+  {
+   "id": "2",
+   "type": "assign",
+   "x": 220,
+   "y": 160,
+   "props": {
+    "name": "Arrival Time",
+    "assignments": [
+     {
+      "type": "Attribute",
+      "attribute": "ArrTime",
+      "value": "TNOW"
+     }
+    ]
+   }
+  },
+  {
+   "id": "3",
+   "type": "process",
+   "x": 400,
+   "y": 160,
+   "props": {
+    "name": "Assembly",
+    "type": "Standard",
+    "action": "Seize Delay Release",
+    "priority": "Medium (2)",
+    "resources": [
+     {
+      "type": "Resource",
+      "resource": "Assembler",
+      "quantity": "1"
+     }
+    ],
+    "units": "Hours",
+    "allocation": "Value Added",
+    "report": true,
+    "delay_type": "Uniform",
+    "minimum": "2",
+    "maximum": "6"
+   }
+  },
+  {
+   "id": "4",
+   "type": "decide",
+   "x": 580,
+   "y": 160,
+   "props": {
+    "name": "Quality Check",
+    "type": "2-way by Chance",
+    "percent_true": "85"
+   }
+  },
+  {
+   "id": "5",
+   "type": "assign",
+   "x": 580,
+   "y": 300,
+   "props": {
+    "name": "Number of Reworks",
+    "assignments": [
+     {
+      "type": "Attribute",
+      "attribute": "Total Reworks",
+      "value": "Total Reworks + 1"
+     }
+    ]
+   }
+  },
+  {
+   "id": "6",
+   "type": "process",
+   "x": 760,
+   "y": 160,
+   "props": {
+    "name": "Painting",
+    "type": "Standard",
+    "action": "Seize Delay Release",
+    "priority": "Medium (2)",
+    "resources": [
+     {
+      "type": "Resource",
+      "resource": "Painter",
+      "quantity": "1"
+     }
+    ],
+    "units": "Hours",
+    "allocation": "Value Added",
+    "report": true,
+    "delay_type": "Constant",
+    "value": "3"
+   }
+  },
+  {
+   "id": "7",
+   "type": "record",
+   "x": 940,
+   "y": 160,
+   "props": {
+    "name": "Flow Time",
+    "type": "Time Interval",
+    "attribute": "ArrTime",
+    "tally_name": "Flow Time"
+   }
+  },
+  {
+   "id": "8",
+   "type": "record",
+   "x": 1120,
+   "y": 160,
+   "props": {
+    "name": "Reworks per Job",
+    "type": "Expression",
+    "value": "Total Reworks",
+    "tally_name": "Reworks per Job"
+   }
+  },
+  {
+   "id": "9",
+   "type": "dispose",
+   "x": 1300,
+   "y": 160,
+   "props": {
+    "name": "Completed",
+    "record_stats": true
+   }
+  }
+ ],
+ "links": [
+  {
+   "from": "1",
+   "to": "2",
+   "port": "out"
+  },
+  {
+   "from": "2",
+   "to": "3",
+   "port": "out"
+  },
+  {
+   "from": "3",
+   "to": "4",
+   "port": "out"
+  },
+  {
+   "from": "4",
+   "to": "6",
+   "port": "true"
+  },
+  {
+   "from": "4",
+   "to": "5",
+   "port": "false"
+  },
+  {
+   "from": "5",
+   "to": "3",
+   "port": "out"
+  },
+  {
+   "from": "6",
+   "to": "7",
+   "port": "out"
+  },
+  {
+   "from": "7",
+   "to": "8",
+   "port": "out"
+  },
+  {
+   "from": "8",
+   "to": "9",
+   "port": "out"
+  }
+ ]
+}

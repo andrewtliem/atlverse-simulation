@@ -1,0 +1,21 @@
+name: Bank
+time_units: minutes
+replicate: {replications: 10, length: 480}
+
+attributes: {vip: 0}
+resources:
+  Teller: {capacity: 2, schedule: Shift, busy_per_hour: 20, idle_per_hour: 12}
+  Manager: {capacity: 1}
+schedules:
+  Shift: {segments: [[2, 120], [3, 120], [2, 240]], rule: wait}
+
+flow:
+  - create: {interval: EXPO(2), entity_type: Customer}
+  - assign: {assignments: [[vip, "DISC(0.9, 0, 1.0, 1)"]]}
+  - decide: {if: "vip == 1", then: VIP}
+  - process: {name: Teller Service, resources: [[Teller, 1]], delay: "TRIA(2, 4, 7)"}
+  - dispose: {}
+  - label: VIP
+    process: {name: Manager Service, resources: [[Manager, 1]], delay: EXPO(6)}
+  - record: {type: count, name: VIPs served}
+  - dispose: {}
