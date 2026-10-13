@@ -74,7 +74,7 @@ _cache: dict[str, Compiled] = {}
 def compile_expr(src: str) -> Compiled:
     if src in _cache:
         return _cache[src]
-    py = _translate(src)
+    py = _translate(src).strip()   # a leading .NOT. becomes ' not ...'
     # Symbol names in Arena may contain spaces/dots ("Queue 1", "Process 1.Queue").
     # Callers should register such names with `quote_names` first; here we
     # accept plain identifiers only.

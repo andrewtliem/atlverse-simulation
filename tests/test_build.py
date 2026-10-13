@@ -74,3 +74,16 @@ class TestBuild(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestExpressions(unittest.TestCase):
+    def test_leading_not_and_ident(self):
+        from simcore.expr import evaluate
+        self.assertTrue(evaluate(".NOT. 0", None))
+        self.assertFalse(evaluate(".NOT. (2 .GT. 1)", None))
+        g = json.loads(json.dumps(BANK))   # a Record that counts by IDENT sums entity numbers
+        g["nodes"][1:1] = [{"id": "9", "type": "record", "x": 0, "y": 0, "props": {"name": "Idents", "type": "Count", "value": "IDENT"}}]
+        g["links"] = [{"from": "1", "to": "9", "port": "out"}, {"from": "9", "to": "2", "port": "out"}, {"from": "2", "to": "3", "port": "out"}]
+        res = api.run_graph(g)
+        n = res["replications"][0]["entities"]["in_"]["C"]
+        self.assertGreaterEqual(res["replications"][0]["counters"]["Idents"], n * (n + 1) / 2)

@@ -751,6 +751,8 @@ class Model:
 
     def special_attr(self, e: Entity, name: str):
         u = name.upper()
+        if u == "IDENT":   # entity number (read-only)
+            return e.serial
         if u in self._SPECIAL:
             return getattr(e, self._SPECIAL[u])
         if u in self._COSTS:
