@@ -16,8 +16,6 @@
   <a href="#bahasa-indonesia">Bahasa Indonesia</a>
 </p>
 
-![Editor with the emergency-room model](docs/screenshots/editor.png)
-
 Atlverse Simulation is a discrete-event simulation engine written in Python (package
 `simcore`) with a web editor on top. The engine implements the SIMAN modelling language —
 entities flowing through blocks, resources and queues, schedules, transfer (stations, routes,
@@ -31,15 +29,58 @@ on ties differs). [`COVERAGE.md`](COVERAGE.md) lists every SIMAN block and eleme
 
 ## Features
 
-| | |
-|---|---|
-| **Modelling** — drag modules onto the canvas and connect them; module dialogs follow Arena's prompts; data modules for Entity, Queue, Resource, Schedule (with a graphical editor), Variable, Set, Expression, Statistic, Failure, StateSet, Transporter, Conveyor. Live validation, undo/redo, copy/paste. | **Animation** — after a run, replication 1 is replayed: entities move between modules, queue counts and resource states update, and live plots draw queue lengths, resources busy and work in process. Go, Step, Pause, Fast-Forward, End, as in Arena. |
-| ![Animation with live plots](docs/screenshots/animation.png) | ![Summary with interpretation and charts](docs/screenshots/summary.png) |
-| **Reports** — Category Overview (Entity, Process, Queue, Resource, User Specified) with half widths across replications, the full text report, charts, and a *"how to read these results"* box that explains utilization, waiting time, Little's law and precision in plain language. | **Scenarios** — a small Process Analyzer: choose controls (resource capacity, variable values, time between arrivals), run every scenario with its own replications, compare responses with 95% confidence intervals. |
-| ![Scenario comparison](docs/screenshots/scenarios.png) | ![Input Analyzer](docs/screenshots/input-analyzer.png) |
-| **Input Analyzer** — paste observed data, see the histogram, fit UNIF, TRIA, NORM, EXPO, ERLA, GAMM, LOGN, WEIB, BETA and POIS (with offsets), ranked by square error with chi-square and Kolmogorov–Smirnov p-values, and put the expression straight into a module. | **Student reports** — students enter their name and student number once; *File → Laporan* produces an HTML/PDF report with the model diagram, Run Setup, results and scenarios, watermarked on every page with a verification code. *File → Periksa laporan* lets the lecturer check that a report was not edited and which students saved the model. |
-| ![Watermarked student report](docs/screenshots/report.png) | ![Guided tutorial](docs/screenshots/tutorial.png) |
-| **Guided tutorials** — step-by-step tutorials (a first queueing model, Decide, Assign, Schedule) that check each step in the model before going on, plus a glossary of about 60 terms (F1). The learning aids are in Bahasa Indonesia; module and report terms stay in English, as in Arena. | **Runs anywhere** — a local server (`python -m simcore.web`) or a static site (`python -m simcore.web.build`) for GitHub Pages, Cloudflare Pages, Netlify or a campus web server. Works offline after the first visit. |
+<table>
+<tr>
+<td width="50%" valign="top">
+<b>Modelling</b><br>
+Drag modules onto the canvas and connect them. Module dialogs follow Arena's prompts; data modules for Entity, Queue, Resource, Schedule (with a graphical editor), Variable, Set, Expression, Statistic, Failure, StateSet, Transporter and Conveyor. Live validation, undo/redo, copy/paste.<br><br>
+<img src="docs/screenshots/editor.png" alt="Editor with the emergency-room model">
+</td>
+<td width="50%" valign="top">
+<b>Expression Builder</b><br>
+An <b>ƒx</b> button on every expression field (or right-click), like Arena's <i>Build Expression</i>: distributions, the model's variables, attributes, resources, queues and statistics, functions and operators. <code>DISC</code>/<code>CONT</code> are built from a table of values and percentages.<br><br>
+<img src="docs/screenshots/expression-builder.png" alt="Expression Builder building a DISC">
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<b>Animation and live plots</b><br>
+After a run, replication 1 is replayed: entities move between modules, queue counts and resource states update, and live plots draw queue lengths, resources busy and work in process. Go, Step, Pause, Fast-Forward and End, as in Arena.<br><br>
+<img src="docs/screenshots/animation.png" alt="Animation with live plots">
+</td>
+<td width="50%" valign="top">
+<b>Reports</b><br>
+Category Overview (Entity, Process, Queue, Resource, User Specified) with half widths across replications, the full text report, charts, and a <i>how to read these results</i> box that explains utilization, waiting time, Little's law and precision in plain language.<br><br>
+<img src="docs/screenshots/summary.png" alt="Summary with interpretation and charts">
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<b>Scenarios</b><br>
+A small Process Analyzer: choose controls (resource capacity, variable values, time between arrivals), run every scenario with its own replications, and compare the responses with 95% confidence intervals.<br><br>
+<img src="docs/screenshots/scenarios.png" alt="Scenario comparison">
+</td>
+<td width="50%" valign="top">
+<b>Input Analyzer</b><br>
+Paste observed data, see the histogram, fit UNIF, TRIA, NORM, EXPO, ERLA, GAMM, LOGN, WEIB, BETA and POIS (with offsets), ranked by square error with chi-square and Kolmogorov–Smirnov p-values, and put the expression straight into a module.<br><br>
+<img src="docs/screenshots/input-analyzer.png" alt="Input Analyzer">
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<b>Student reports</b><br>
+Students enter their name and student number once; <i>File → Laporan</i> produces an HTML/PDF report with the model diagram, Run Setup, results and scenarios, watermarked on every page with a verification code. <i>File → Periksa laporan</i> lets the lecturer check that a report was not edited and who saved the model.<br><br>
+<img src="docs/screenshots/report.png" alt="Watermarked student report">
+</td>
+<td width="50%" valign="top">
+<b>Guided tutorials</b><br>
+Step-by-step tutorials (a first queueing model, Decide, Assign, Schedule) that check each step in the model before going on, plus a glossary of about 70 terms (F1). The learning aids are in Bahasa Indonesia; module and report terms stay in English, as in Arena.<br><br>
+<img src="docs/screenshots/tutorial.png" alt="Guided tutorial">
+</td>
+</tr>
+</table>
+
+**Runs anywhere** — a local server (`python -m simcore.web`) or a static site (`python -m simcore.web.build`) for GitHub Pages, Cloudflare Pages, Netlify or a campus web server; works offline after the first visit.
 
 ## Quick start
 
@@ -89,8 +130,12 @@ code in the flow.
 ## Expressions
 
 Expressions use SIMAN syntax, e.g. `TRIA(1, 2, 4)`, `NQ(Triage.Queue) > 3 .AND. Size == 2`,
-`TNOW - ArrTime`. Named expressions go in the **Expression** data module (the replacement for
-SIMAN's obsolete `DISTRIBUTIONS`/`DIST`).
+`TNOW - ArrTime`. Every expression field has an **ƒx Expression Builder** (also on right-click,
+like Arena's *Build Expression*): pick a distribution, a variable, attribute, resource, queue,
+statistic or function from lists of the model's own names and fill in its parameters; `DISC` and
+`CONT` are built from a table of values and percentages, cumulative probabilities included.
+Named expressions go in the **Expression** data module (the replacement for SIMAN's obsolete
+`DISTRIBUTIONS`/`DIST`).
 
 | Group | Supported |
 |---|---|
@@ -168,12 +213,14 @@ berjalan di laptop masing-masing. Fitur untuk kelas:
 
 - **Tutorial terpandu** (🎓): model antrean pertama, Decide, Assign dan Schedule; setiap langkah
   diperiksa otomatis.
-- **Help & istilah** (F1): sekitar 60 istilah laporan dan modul dijelaskan dalam Bahasa Indonesia;
+- **Help & istilah** (F1): sekitar 70 istilah laporan dan modul dijelaskan dalam Bahasa Indonesia;
   judul kolom di Summary bisa diklik.
 - **Cara membaca hasil**: penjelasan otomatis di atas Summary (utilisasi, waktu tunggu, Hukum
   Little, half width).
 - **Identitas mahasiswa** (👤) dan **File → Laporan HTML/PDF** dengan watermark nama, NIM dan
   kode verifikasi; dosen memeriksa keaslian laporan lewat **File → Periksa laporan**.
+- **Expression Builder** (tombol **ƒx** atau klik kanan di kolom expression): pilih distribusi, variable,
+  resource, antrean atau fungsi dari daftar; `DISC`/`CONT` cukup diisi tabel nilai dan peluang (%).
 - **Tools → Scenarios** untuk membandingkan skenario, **Tools → Input Analyzer** untuk mencari
   distribusi dari data.
 

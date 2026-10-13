@@ -88,6 +88,31 @@ await page.locator(".node", { has: page.locator("text", { hasText: "Teller Servi
 await menu("tools", "#mi-input"); await page.click("#anasample"); await page.click("#anause");
 check("expression used in the selected Process", await page.evaluate(() => { const n = allNodes().find(n => n.props.name === "Teller Service"); return n.props.delay_type === "Expression" && /GAMM|WEIB|EXPO|ERLA|LOGN|BETA/.test(n.props.expression); }));
 
+// Expression Builder: build a DISC from a table into an Assign, then run
+await page.evaluate(() => {
+  change(() => {
+    const a = {id: "90", type: "assign", x: 200, y: 300, props: {...defaults("assign"), name: "Jenis", assignments: [{type: "Variable", variable: "Jenis", value: "0"}]}};
+    model.nodes.push(a);
+    const l = model.links.find(l => l.from === "1"); model.links.push({from: "90", to: l.to, port: "out"}); l.to = "90";
+  });
+  sel = new Set(["90"]); renderSide();
+});
+await page.locator(".xbwrap", { has: page.getByLabel("Assignments 1 New Value") }).locator(".xbbtn").click();
+check("ƒx opens the Expression Builder with the field's value", await page.isVisible("#xbdlg") && await page.inputValue("#xbexpr") === "0");
+await page.click('#xbcats button:has-text("Distribusi")'); await page.click('#xbitems button:has-text("DISC")');
+await page.getByLabel("Nilai baris 1").fill("1"); await page.getByLabel("Peluang baris 1").fill("70");
+await page.getByLabel("Nilai baris 2").fill("2"); await page.getByLabel("Peluang baris 2").fill("30");
+check("DISC built from percentages", await page.textContent(".xbpreview") === "DISC(0.7, 1, 1.0, 2)");
+await page.fill("#xbexpr", ""); await page.click('#xbform button:has-text("Sisipkan")'); await page.click("#xbok");
+const nv = await page.evaluate(() => allNodes().find(n => n.props.name === "Jenis").props.assignments[0].value);
+check("OK writes the expression into the module", nv === "DISC(0.7, 1, 1.0, 2)", nv);
+await page.evaluate(() => { model.run.batch_run = true; model.run.replications = "1"; lastResults = null; });
+await page.click("#brun"); await page.waitForFunction(() => !!lastResults, null, { timeout: 60000 });
+check("model with the built expression runs", !!(await page.evaluate(() => lastResults.report)));
+await page.locator("#side input.expr").first().click({ button: "right" });
+check("right-click on an expression field opens the builder", await page.isVisible("#xbdlg"));
+await page.keyboard.press("Escape");
+
 // live plots
 await page.evaluate(() => { model.run.batch_run = false; model.run.replications = "1"; model.data.resources.Teller.capacity = "1"; });
 await page.click("#brun"); await page.waitForSelector("#anibar.on", { timeout: 60000 });

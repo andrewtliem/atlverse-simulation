@@ -203,6 +203,10 @@ const GLOSS = [
   ["input_analyzer", "Input Analyzer", "Alat", ["Input Analyzer", "Fit All", "Square Error"],
    `Mencari distribusi yang cocok untuk data pengamatan (menu <b>Tools → Input Analyzer</b>). Tempel datanya, lalu <b>Fit All</b>: setiap distribusi diberi <b>square error</b> (selisih histogram data dengan distribusi; makin kecil makin cocok), uji <b>chi-square</b> dan uji <b>Kolmogorov-Smirnov (K-S)</b>.
     p-value ≥ 0.05 berarti data <i>konsisten</i> dengan distribusi itu. Expression hasilnya, misalnya <code>2.3 + GAMM(2.49, 1.07)</code>, bisa langsung dipakai di Create atau Process. Kumpulkan minimal 30 data agar hasilnya bisa dipercaya.`],
+  ["expr_builder", "Expression Builder (ƒx)", "Alat", ["Expression Builder", "Build Expression", "ƒx"],
+   `Setiap kolom expression punya tombol <b>ƒx</b> (atau klik kanan pada kolomnya) untuk membuka Expression Builder, seperti <i>Build Expression</i> di Arena.
+    Pilih kategori (Distribusi, Variable &amp; Attribute, Resource, Antrean, Statistik, Waktu &amp; entity, Matematika, Operator), isi parameternya, lalu <b>Sisipkan</b>; hasilnya masuk di posisi kursor pada <i>Current Expression</i>.
+    Untuk <code>DISC</code> dan <code>CONT</code> cukup isi tabel nilai dan peluang (%); peluang kumulatifnya dihitung otomatis. Expression yang sering dipakai bisa diberi nama di data module <b>Expression</b>, lalu cukup ditulis namanya.`],
   ["report_code", "Laporan & kode verifikasi", "Alat", ["Kode verifikasi", "Laporan", "Watermark", "Identitas"],
    `<b>File → Laporan HTML / PDF</b> membuat laporan berisi identitas (Nama, NIM, Kelas), diagram model, Run Setup, hasil, dan perbandingan skenario. Setiap halaman diberi <b>watermark</b> nama, NIM dan <b>kode verifikasi</b>.
     Kode dihitung dari seluruh isi file: jika laporan diubah setelah dibuat, <b>File → Periksa laporan</b> akan menyatakan kodenya tidak cocok. Model juga mencatat <b>Model ID</b> dan riwayat NIM yang pernah menyimpannya. Kumpulkan file laporan apa adanya (jangan disimpan ulang dari browser).`],
