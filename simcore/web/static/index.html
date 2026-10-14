@@ -865,8 +865,16 @@ function setModel(m, keepHistory) {
   } catch (e) { /* first call at start-up, before the run state exists */ }
 }
 function snapshot() { return JSON.stringify(model); }
+// Editing during a run (playing, paused or finished but still animated) ends that run first,
+// so the next Go always runs the model as it is now, never the old run with old values.
+function leaveRun() {
+  if (!anim) return;
+  if (!anim.published) clearResults("Model diubah sebelum run selesai, jadi run itu dihentikan. Klik ▶ Go untuk run ulang dengan perubahan.");
+  stopAnim();
+  toast("Model diubah — run dihentikan. Klik ▶ Go untuk run ulang dengan perubahan");
+}
 function change(fn, opts = {}) {      // every edit goes through here: history + autosave + validate
-  if (anim) return;
+  leaveRun();
   undo.push(snapshot()); if (undo.length > 200) undo.shift(); redo = [];
   fn();
   markDirty(); render(); if (!opts.keepSide) renderSide(); updateButtons(); scheduleValidate();
@@ -1236,6 +1244,7 @@ function labeled(parent, text, kind, value, onChange, opts = {}) {
 }
 let editTimer = null, editBase = null;
 function editProp(fn, rerenderSide) {   // typing edits are grouped into one undo step
+  leaveRun();
   if (editBase === null) editBase = snapshot();
   fn(); markDirty(); render(); if (rerenderSide) renderSide(); else refreshCapacities();
   clearTimeout(editTimer);
@@ -2012,7 +2021,9 @@ async function startRun(paused) {
     } catch (e) { /* the run itself reports errors */ }
   }, 400);
   try {
+    const sent = snapshot();
     const res = await api("POST", `/api/run?id=${id}`, model);
+    if (snapshot() !== sent) toast("Model diubah selama perhitungan — hasil ini memakai model sebelum perubahan. Klik ▶ Go lagi untuk run ulang");
     setProblems(res.warnings || []);
     const ended = res.stopped ? `Ended by you at replication ${res.replications_done} of ${reps}, t = ${fmt(res.replications[res.replications.length - 1].time)} ${model.time_units}. ` : "";
     res.info = ended + (r.batch_run ? "Batch run (no animation)" : `${res.anim.length.toLocaleString()} animation events` + (res.anim_truncated ? " (truncated)" : ""));

@@ -133,6 +133,17 @@ await capSide.fill("4");
 check("Capacity in the module changes the Resource data module", await page.evaluate(() => model.data.resources.Teller.capacity) === "4" && await capSheet.inputValue() === "4");
 await capSheet.fill("3");
 check("Capacity in the spreadsheet shows in the module", await capSide.inputValue() === "3");
+// editing while a run is paused ends that run, so Go runs the edited model (it used to resume the old run)
+await page.evaluate(() => { model.run.batch_run = false; model.run.replications = "1"; model.data.resources.Teller.capacity = "1"; });
+await page.click("#brun"); await page.waitForFunction(() => anim && anim.t > 0, null, { timeout: 60000 });
+await page.click("#bpause");
+await page.evaluate(() => { sheet = {kind: "data", key: "resources"}; openPane("sheet"); renderSheet(); });
+await page.getByLabel("Teller Capacity").fill("2");
+check("editing during a run ends it", await page.evaluate(() => anim === null));
+await page.click("#brun"); await page.waitForFunction(() => anim, null, { timeout: 60000 }); await page.click("#bff");
+await page.waitForFunction(() => !!lastResults, null, { timeout: 60000 });
+check("Go after the edit runs the new Capacity", await page.evaluate(() => lastResults.replications[0].resources.Teller.number_scheduled) === 2);
+await page.click("#aexit");
 
 check("no console errors", errors.length === 0, errors.join(" | "));
 await browser.close();
