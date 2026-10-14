@@ -18,8 +18,10 @@ const GLOSS = [
   ["resource", "Resource", "Konsep dasar", ["Resource", "Resource Name"],
    `Sesuatu yang <b>terbatas jumlahnya</b> dan dibutuhkan entity untuk dilayani: teller, dokter, mesin. Entity harus <i>Seize</i> (merebut) resource. Kalau semua unit sedang dipakai, entity <b>antre</b>.
     Setelah selesai, entity <i>Release</i> resource supaya bisa dipakai entity lain.`],
-  ["capacity", "Capacity", "Konsep dasar", ["Capacity"],
-   `Jumlah unit resource yang tersedia, misalnya 2 teller. <i>Fixed Capacity</i> berarti jumlahnya tetap. <i>Based on Schedule</i> berarti jumlahnya mengikuti jadwal, misalnya 3 dokter siang dan 1 dokter malam.`],
+  ["capacity", "Capacity", "Konsep dasar", ["Capacity", "Capacity ↔ Resource", "Quantity"],
+   `Jumlah unit resource yang tersedia, misalnya 2 teller. <i>Fixed Capacity</i> berarti jumlahnya tetap. <i>Based on Schedule</i> berarti jumlahnya mengikuti jadwal, misalnya 3 dokter siang dan 1 dokter malam.
+    Capacity diatur di data module <b>Resource</b>; di module Process/Seize ditampilkan juga sebagai <b>Capacity ↔ Resource</b> (nilai yang sama, ubah di salah satu tempat).
+    Jangan tertukar dengan <b>Quantity</b> di module: Quantity = berapa unit yang dipakai <i>setiap entity</i>. Menambah teller berarti menaikkan Capacity, bukan Quantity. Capacity 2 dengan Quantity 2 sama saja dengan 1 teller: setiap nasabah memakai dua teller sekaligus.`],
   ["queue", "Queue", "Konsep dasar", ["Queue", "Queue Name"],
    `Tempat entity <b>menunggu</b> ketika resource yang dibutuhkan sedang penuh. Setiap Process yang melakukan Seize otomatis punya antrean bernama "<i>Nama Process</i>.Queue".
     Contoh: Process <b>Triage</b> → antrean <code>Triage.Queue</code>, sehingga panjangnya dibaca dengan <code>NQ(Triage.Queue)</code>.

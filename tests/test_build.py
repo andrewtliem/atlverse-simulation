@@ -22,6 +22,18 @@ BANK = {"version": 2, "name": "Bank", "time_units": "minutes",
 
 
 class TestApi(unittest.TestCase):
+    def test_capacity_and_quantity(self):
+        def graph(cap, qty):
+            g = json.loads(json.dumps(BANK))
+            g["data"]["resources"]["Teller"]["capacity"] = cap
+            g["nodes"][1]["props"]["resources"][0]["quantity"] = qty
+            return g
+        wait = lambda g: api.run_graph(g)["across"]["queues.Serve.Queue"]["average"]
+        self.assertLess(wait(graph("2", "1")), wait(graph("1", "1")) / 2)       # a second teller
+        self.assertAlmostEqual(wait(graph("2", "2")), wait(graph("1", "1")))   # each customer takes both
+        self.assertEqual(api.validate(graph("2", "2")), [])
+        self.assertIn("more than the Capacity", api.validate(graph("1", "2"))[0]["message"])
+
     def test_run_is_json_and_can_stop(self):
         res = api.run_graph(BANK)
         json.dumps(res)   # NaN/inf cleaned

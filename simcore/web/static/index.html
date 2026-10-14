@@ -1237,7 +1237,7 @@ function labeled(parent, text, kind, value, onChange, opts = {}) {
 let editTimer = null, editBase = null;
 function editProp(fn, rerenderSide) {   // typing edits are grouped into one undo step
   if (editBase === null) editBase = snapshot();
-  fn(); markDirty(); render(); if (rerenderSide) renderSide();
+  fn(); markDirty(); render(); if (rerenderSide) renderSide(); else refreshCapacities();
   clearTimeout(editTimer);
   editTimer = setTimeout(() => { undo.push(editBase); redo = []; editBase = null; updateButtons(); scheduleValidate(); }, 500);
 }
@@ -1286,12 +1286,36 @@ function renderRepeat(parent, owner, fd, opts) {
     btn("✕", `Delete ${fd.label} row ${i + 1}`, () => { rows.splice(i, 1); dropPort(owner, fd, i); });
     const grid = document.createElement("div"); grid.className = "grid"; card.appendChild(grid);
     renderFields(grid, row, fd.cols, {...opts, parent: owner, aria: `${fd.label} ${i + 1} `,
-      onEdit: () => { title.textContent = `${i + 1}. ${fd.title(row)}`; }});
+      onEdit: () => { title.textContent = `${i + 1}. ${fd.title(row)}`; refreshCapacities(); }});
+    if (fd.key === "resources" && row.type === "Resource" && fd.cols.some(c => c.key === "rule")) capacityField(grid, row, `${fd.label} ${i + 1} `);
   });
   const add = document.createElement("button"); add.className = "addrow"; add.textContent = "+ " + (fd.add || "Add");
   add.onclick = () => change(() => rows.push(fillRows(fd.cols, {...fieldDefaults(fd.cols), ...clone((fd.def || [])[0] || {})})));
   box.appendChild(add);
 }
+// A seizing resource row also shows the resource's Capacity: the same value as in the Resource
+// data module, so editing either place changes both. Quantity is what one entity seizes.
+const capLinks = new WeakMap();
+function capacityField(grid, row, aria) {
+  const cell = document.createElement("div"); cell.className = "fld"; grid.appendChild(cell);
+  const target = () => { const n = String(row.resource || "").trim(); return row.type === "Resource" && n && !model.data.sets[n] ? n : ""; };
+  const e = labeled(cell, "Capacity ↔ Resource", "expr", "", v => editProp(() => {
+    const n = target(); if (!n) return;
+    syncData(); model.data.resources[n].capacity = v;
+    if (sheet && sheet.kind === "data" && sheet.key === "resources" && $("p-sheet").classList.contains("on")) renderSheet();
+  }), {aria: aria + "Capacity", placeholder: "1"});
+  e.classList.add("caplink");
+  cell.title = "Jumlah unit resource ini — nilai yang sama dengan Capacity di data module Resource; mengubah di sini juga mengubahnya di sana. Quantity = unit yang dipakai setiap entity.";
+  const refresh = () => {
+    const n = target(), r = n && model.data.resources[n];
+    const sched = r && r.type === "Based on Schedule";
+    e.disabled = !n || sched;
+    if (document.activeElement !== e) e.value = !n ? "" : sched ? `Schedule: ${r.schedule || "?"}` : String(r ? r.capacity ?? "1" : "1");
+  };
+  capLinks.set(e, refresh); refresh();
+}
+function refreshCapacities() { for (const e of document.querySelectorAll("#side input.caplink")) (capLinks.get(e) || (() => {}))(); }
+
 function dropPort(owner, fd, i) {   // deleting an N-way Decide row removes its exit and renumbers the later ones
   const n = G().nodes.find(x => x.props === owner);
   if (!n || n.type !== "decide" || !has(fd.key, "conditions", "percentages")) return;

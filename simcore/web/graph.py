@@ -620,6 +620,12 @@ def to_model_dict(g: dict) -> dict:
                     problem(nid, f"{where} has no resource name")
                     continue
                 need_resource(rn)
+                cap, qn = (resources.get(rn) or {}).get("capacity"), _num(q)
+                if (not releasing and isinstance(cap, (int, float)) and isinstance(qn, (int, float))
+                        and qn > cap and not (resources.get(rn) or {}).get("schedule")):
+                    problem(nid, f'{where}: Quantity {qn:g} is more than the Capacity {cap:g} of resource "{rn}", '
+                                 f'so entities wait forever. Quantity is the units each entity seizes; '
+                                 f'the number of units is the Capacity in the Resource data module')
                 items.append([rn, q])
             elif kind == "Set":
                 sn = str(r.get("set", "")).strip()

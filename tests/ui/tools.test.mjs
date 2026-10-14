@@ -126,5 +126,13 @@ check("plot can be hidden", await page.isHidden("#plots"));
 await page.click("#bplots"); await page.click("#aexit"); await page.waitForTimeout(200);
 check("plot closes with the animation", await page.isHidden("#plots"));
 
+// a seizing resource row shows the resource's Capacity, linked with the Resource data module
+await page.evaluate(() => { const n = G().nodes.find(n => n.type === "process"); sel = new Set([n.id]); sideTab = "model"; render(); renderSide(); sheet = {kind: "data", key: "resources"}; openPane("sheet"); renderSheet(); });
+const capSide = page.getByLabel("Resources 1 Capacity"), capSheet = page.getByLabel("Teller Capacity");
+await capSide.fill("4");
+check("Capacity in the module changes the Resource data module", await page.evaluate(() => model.data.resources.Teller.capacity) === "4" && await capSheet.inputValue() === "4");
+await capSheet.fill("3");
+check("Capacity in the spreadsheet shows in the module", await capSide.inputValue() === "3");
+
 check("no console errors", errors.length === 0, errors.join(" | "));
 await browser.close();
