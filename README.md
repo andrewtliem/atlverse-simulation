@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://atlverse-simulation.pages.dev"><b>▶ Open the app</b></a> ·
+  <a href="https://simulation.atlverse.xyz"><b>▶ Open the app</b></a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#features">Features</a> ·
   <a href="#expressions">Expressions</a> ·
@@ -84,7 +84,7 @@ Step-by-step tutorials (a first queueing model, Decide, Assign, Schedule) that c
 
 ## Quick start
 
-**In the browser:** open <https://atlverse-simulation.pages.dev>, or host your own copy
+**In the browser:** open <https://simulation.atlverse.xyz>, or host your own copy
 (see [In the browser](#in-the-browser)).
 
 **On your computer** (Python 3.10+, no other packages needed; PyYAML only for YAML files):
@@ -208,7 +208,7 @@ BASE=http://127.0.0.1:8790/ node tests/ui/revisit.test.mjs
 ## Bahasa Indonesia
 
 Atlverse Simulation adalah aplikasi simulasi sistem diskrit untuk perkuliahan. Mahasiswa cukup
-membuka <https://atlverse-simulation.pages.dev> di browser — tidak perlu instalasi; simulasi
+membuka <https://simulation.atlverse.xyz> di browser — tidak perlu instalasi; simulasi
 berjalan di laptop masing-masing. Fitur untuk kelas:
 
 - **Tutorial terpandu** (🎓): model antrean pertama, Decide, Assign dan Schedule; setiap langkah
