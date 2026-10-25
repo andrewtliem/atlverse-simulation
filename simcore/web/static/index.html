@@ -162,6 +162,15 @@ button.addrow { margin-top: 2px; font-size: 12.5px; }
 .card .grid .fld.wide, .card .grid .rep { grid-column: 1 / -1; }
 .card .grid label.chk { margin: 6px 0 0; }
 .colorrow { display: flex; gap: 4px; } .colorrow input { flex: 1; }
+.picico { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 1; }
+button.picbtn { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; padding: 2px 8px; min-height: 28px; }
+button.picbtn span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#picsearch { width: 100%; margin-bottom: 6px; }
+.picgrp { font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+.picgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 4px; }
+.picgrid button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; font-size: 11.5px; line-height: 1.2; }
+.picgrid button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.ent.emo { stroke: none; } .ent.emo circle { stroke: rgba(0,0,0,.35); stroke-width: .6; }
 .perr { color: var(--err); font-size: 12px; margin: 6px 0; }
 details.data .hint { margin: 2px 0 6px; }
 #bottom { height: 0; background: var(--panel); border-top: 1px solid var(--line); display: flex; flex-direction: column; }
@@ -378,6 +387,11 @@ table.res tr.click { cursor: pointer; } table.res tr.click:hover td { background
     <div class="dlgbtns"><button id="gsok" class="primary">OK</button><button id="gscancel">Cancel</button></div>
   </div>
 </div>
+<div id="picdlg" class="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="pictitle">
+  <div class="dlgbox wide"><h3 id="pictitle">Choose a picture</h3>
+    <input id="picsearch" type="search" placeholder="Search pictures (car, person, ball…)" aria-label="Search pictures">
+    <div id="picbody"></div><div class="dlgbtns"><button id="piccancel">Cancel</button></div></div>
+</div>
 <div id="rowsdlg" class="dlg" hidden role="dialog" aria-modal="true" aria-labelledby="rowstitle">
   <div class="dlgbox"><h3 id="rowstitle"></h3><div id="rowsbody"></div><div class="dlgbtns"><button id="rowsclose" class="primary">Close</button></div></div>
 </div>
@@ -410,15 +424,94 @@ const PRIO = ["High (1)", "Medium (2)", "Low (3)", "Other"];
 const SELRULE = ["Cyclical", "Random", "Preferred Order", "Specific Member", "Largest Remaining Capacity", "Smallest Number Busy"];
 const QTYPE = ["Queue", "Set", "Internal", "Attribute", "Expression"];
 const OPS = [">=", ">", "==", "<>", "<", "<="];
-// Entity pictures: colour and shape used by the animation
-const PICTURES = {
-  "Picture.Report": ["#f59e0b", "rect"], "Picture.Box": ["#a16207", "rect"], "Picture.Package": ["#b45309", "rect"],
-  "Picture.Envelope": ["#94a3b8", "rect"], "Picture.Red Ball": ["#dc2626", "circle"], "Picture.Blue Ball": ["#2563eb", "circle"],
-  "Picture.Green Ball": ["#16a34a", "circle"], "Picture.Yellow Ball": ["#eab308", "circle"], "Picture.Red Page": ["#ef4444", "rect"],
-  "Picture.Blue Page": ["#3b82f6", "rect"], "Picture.Green Page": ["#22c55e", "rect"], "Picture.Yellow Page": ["#facc15", "rect"],
-  "Picture.Man": ["#0ea5e9", "diamond"], "Picture.Woman": ["#db2777", "diamond"], "Picture.Truck": ["#475569", "rect"],
-  "Picture.Airplane": ["#64748b", "diamond"],
+// Entity pictures: colour, shape and (for "emoji") the glyph the animation draws, grouped for the picker.
+// Shape pictures take the entity's override colour; an emoji picture gets it as a disc behind the glyph.
+const PIC_GROUPS = {
+  Shapes: {
+    "Picture.Report": ["#f59e0b", "rect"], "Picture.Box": ["#a16207", "rect"],
+    "Picture.Red Ball": ["#dc2626", "circle"], "Picture.Blue Ball": ["#2563eb", "circle"], "Picture.Green Ball": ["#16a34a", "circle"],
+    "Picture.Yellow Ball": ["#eab308", "circle"], "Picture.Orange Ball": ["#ea580c", "circle"], "Picture.Purple Ball": ["#7c3aed", "circle"],
+    "Picture.Pink Ball": ["#db2777", "circle"], "Picture.Black Ball": ["#1f2937", "circle"],
+    "Picture.Red Page": ["#ef4444", "rect"], "Picture.Blue Page": ["#3b82f6", "rect"], "Picture.Green Page": ["#22c55e", "rect"],
+    "Picture.Yellow Page": ["#facc15", "rect"], "Picture.Red Triangle": ["#dc2626", "triangle"], "Picture.Blue Triangle": ["#2563eb", "triangle"],
+    "Picture.Green Triangle": ["#16a34a", "triangle"], "Picture.Red Diamond": ["#dc2626", "diamond"], "Picture.Blue Diamond": ["#2563eb", "diamond"],
+    "Picture.Yellow Star": ["#eab308", "star"], "Picture.Red Star": ["#dc2626", "star"], "Picture.Purple Star": ["#7c3aed", "star"],
+  },
+  People: {
+    "Picture.Man": ["#0ea5e9", "emoji", "👨"], "Picture.Woman": ["#db2777", "emoji", "👩"], "Picture.Person": ["#0ea5e9", "emoji", "🧑"],
+    "Picture.Child": ["#f59e0b", "emoji", "🧒"], "Picture.Baby": ["#f59e0b", "emoji", "👶"], "Picture.Old Man": ["#64748b", "emoji", "👴"],
+    "Picture.Old Woman": ["#64748b", "emoji", "👵"], "Picture.Student": ["#2563eb", "emoji", "🧑‍🎓"], "Picture.Worker": ["#ea580c", "emoji", "👷"],
+    "Picture.Doctor": ["#0d9488", "emoji", "🧑‍⚕️"], "Picture.Patient": ["#dc2626", "emoji", "🤒"], "Picture.Office Worker": ["#475569", "emoji", "🧑‍💼"],
+    "Picture.Cook": ["#f59e0b", "emoji", "🧑‍🍳"], "Picture.Police": ["#1e3a8a", "emoji", "👮"], "Picture.Wheelchair": ["#2563eb", "emoji", "🧑‍🦽"],
+    "Picture.Group": ["#64748b", "emoji", "👥"], "Picture.Family": ["#db2777", "emoji", "👪"],
+  },
+  Vehicles: {
+    "Picture.Car": ["#dc2626", "emoji", "🚗"], "Picture.Taxi": ["#eab308", "emoji", "🚕"], "Picture.SUV": ["#2563eb", "emoji", "🚙"],
+    "Picture.Truck": ["#475569", "emoji", "🚚"], "Picture.Lorry": ["#475569", "emoji", "🚛"], "Picture.Bus": ["#eab308", "emoji", "🚌"],
+    "Picture.Ambulance": ["#dc2626", "emoji", "🚑"], "Picture.Fire Engine": ["#dc2626", "emoji", "🚒"], "Picture.Police Car": ["#1e3a8a", "emoji", "🚓"],
+    "Picture.Motorcycle": ["#1f2937", "emoji", "🏍️"], "Picture.Scooter": ["#16a34a", "emoji", "🛵"], "Picture.Bicycle": ["#16a34a", "emoji", "🚲"],
+    "Picture.Tractor": ["#16a34a", "emoji", "🚜"], "Picture.Train": ["#2563eb", "emoji", "🚆"], "Picture.Airplane": ["#64748b", "emoji", "✈️"],
+    "Picture.Helicopter": ["#64748b", "emoji", "🚁"], "Picture.Ship": ["#1e3a8a", "emoji", "🚢"], "Picture.Boat": ["#0ea5e9", "emoji", "⛵"],
+  },
+  "Documents and goods": {
+    "Picture.Document": ["#94a3b8", "emoji", "📄"], "Picture.Envelope": ["#94a3b8", "emoji", "✉️"], "Picture.Mail": ["#2563eb", "emoji", "📨"],
+    "Picture.Folder": ["#eab308", "emoji", "📁"], "Picture.Clipboard": ["#a16207", "emoji", "📋"], "Picture.Receipt": ["#94a3b8", "emoji", "🧾"],
+    "Picture.Book": ["#2563eb", "emoji", "📘"], "Picture.Package": ["#b45309", "emoji", "📦"], "Picture.Gift": ["#dc2626", "emoji", "🎁"],
+    "Picture.Shopping Bag": ["#db2777", "emoji", "🛍️"], "Picture.Shopping Cart": ["#64748b", "emoji", "🛒"], "Picture.Basket": ["#a16207", "emoji", "🧺"],
+    "Picture.Barrel": ["#1f2937", "emoji", "🛢️"], "Picture.Money": ["#16a34a", "emoji", "💵"], "Picture.Coin": ["#eab308", "emoji", "🪙"],
+    "Picture.Credit Card": ["#2563eb", "emoji", "💳"], "Picture.Ticket": ["#dc2626", "emoji", "🎫"], "Picture.Key": ["#eab308", "emoji", "🔑"],
+    "Picture.Tag": ["#ea580c", "emoji", "🏷️"], "Picture.Clothes": ["#2563eb", "emoji", "👕"], "Picture.Shoe": ["#a16207", "emoji", "👟"],
+  },
+  "Food and drink": {
+    "Picture.Coffee": ["#a16207", "emoji", "☕"], "Picture.Drink": ["#dc2626", "emoji", "🥤"], "Picture.Milk": ["#94a3b8", "emoji", "🥛"],
+    "Picture.Burger": ["#b45309", "emoji", "🍔"], "Picture.Pizza": ["#ea580c", "emoji", "🍕"], "Picture.Bread": ["#b45309", "emoji", "🍞"],
+    "Picture.Rice": ["#94a3b8", "emoji", "🍚"], "Picture.Noodles": ["#ea580c", "emoji", "🍜"], "Picture.Cake": ["#db2777", "emoji", "🍰"],
+    "Picture.Apple": ["#dc2626", "emoji", "🍎"], "Picture.Banana": ["#eab308", "emoji", "🍌"], "Picture.Egg": ["#f59e0b", "emoji", "🥚"],
+    "Picture.Fish": ["#0ea5e9", "emoji", "🐟"], "Picture.Meat": ["#dc2626", "emoji", "🍖"],
+  },
+  Health: {
+    "Picture.Pill": ["#dc2626", "emoji", "💊"], "Picture.Syringe": ["#0ea5e9", "emoji", "💉"], "Picture.Blood": ["#dc2626", "emoji", "🩸"],
+    "Picture.Stethoscope": ["#0d9488", "emoji", "🩺"], "Picture.Test Tube": ["#7c3aed", "emoji", "🧪"], "Picture.Bandage": ["#f59e0b", "emoji", "🩹"],
+    "Picture.Tooth": ["#94a3b8", "emoji", "🦷"],
+  },
+  "Tech and tools": {
+    "Picture.Phone": ["#1f2937", "emoji", "📱"], "Picture.Telephone": ["#dc2626", "emoji", "☎️"], "Picture.Laptop": ["#64748b", "emoji", "💻"],
+    "Picture.Computer": ["#64748b", "emoji", "🖥️"], "Picture.Email": ["#2563eb", "emoji", "📧"], "Picture.Message": ["#0ea5e9", "emoji", "💬"],
+    "Picture.Printer": ["#64748b", "emoji", "🖨️"], "Picture.Disk": ["#1f2937", "emoji", "💾"], "Picture.Gear": ["#64748b", "emoji", "⚙️"],
+    "Picture.Wrench": ["#64748b", "emoji", "🔧"], "Picture.Hammer": ["#a16207", "emoji", "🔨"], "Picture.Screw": ["#64748b", "emoji", "🔩"],
+    "Picture.Battery": ["#16a34a", "emoji", "🔋"], "Picture.Light Bulb": ["#eab308", "emoji", "💡"], "Picture.Magnet": ["#dc2626", "emoji", "🧲"],
+  },
+  Other: {
+    "Picture.Cow": ["#1f2937", "emoji", "🐄"], "Picture.Chicken": ["#ea580c", "emoji", "🐔"], "Picture.Dog": ["#a16207", "emoji", "🐕"],
+    "Picture.Cat": ["#f59e0b", "emoji", "🐈"], "Picture.Plant": ["#16a34a", "emoji", "🌱"], "Picture.Tree": ["#16a34a", "emoji", "🌳"],
+    "Picture.Flower": ["#db2777", "emoji", "🌸"], "Picture.Water": ["#0ea5e9", "emoji", "💧"], "Picture.Fire": ["#ea580c", "emoji", "🔥"],
+    "Picture.Recycle": ["#16a34a", "emoji", "♻️"], "Picture.Trash": ["#64748b", "emoji", "🗑️"], "Picture.Heart": ["#dc2626", "emoji", "❤️"],
+    "Picture.Star": ["#eab308", "emoji", "⭐"], "Picture.Flag": ["#dc2626", "emoji", "🚩"], "Picture.Bell": ["#eab308", "emoji", "🔔"],
+    "Picture.Clock": ["#dc2626", "emoji", "⏰"], "Picture.Check": ["#16a34a", "emoji", "✅"], "Picture.Cross": ["#dc2626", "emoji", "❌"],
+    "Picture.Warning": ["#eab308", "emoji", "⚠️"],
+  },
 };
+const PICTURES = Object.assign({}, ...Object.values(PIC_GROUPS));
+// Outline of a shape picture centred on (x, y); r is its half size.
+function shapePath(shape, x, y, r) {
+  if (shape === "rect") { const a = r * 0.76; return `M${x - a},${y - a}h${2 * a}v${2 * a}h${-2 * a}z`; }
+  if (shape === "triangle") return `M${x},${y - r}L${x + r * 0.95},${y + r * 0.7}L${x - r * 0.95},${y + r * 0.7}z`;
+  if (shape === "star") {
+    let d = "";
+    for (let i = 0; i < 10; i++) { const a = Math.PI / 5 * i - Math.PI / 2, q = i % 2 ? r * 0.45 : r; d += (i ? "L" : "M") + (x + q * Math.cos(a)).toFixed(2) + "," + (y + q * Math.sin(a)).toFixed(2); }
+    return d + "z";
+  }
+  return `M${x},${y - r}L${x + r},${y}L${x},${y + r}L${x - r},${y}z`;   // diamond
+}
+// Small inline picture (HTML string) for the picker and the picture buttons.
+function picIcon(name, size = 22) {
+  const p = PICTURES[name];
+  if (!p) return `<span class="picico" style="width:${size}px;height:${size}px;font-size:${size * 0.7}px">?</span>`;
+  if (p[1] === "emoji") return `<span class="picico" style="width:${size}px;height:${size}px;font-size:${size * 0.82}px">${p[2]}</span>`;
+  const g = p[1] === "circle" ? `<circle cx="12" cy="12" r="8" fill="${p[0]}"/>` : `<path d="${shapePath(p[1], 12, 12, 10)}" fill="${p[0]}"/>`;
+  return `<svg class="picico" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">${g.replace("/>", ' stroke="rgba(0,0,0,.35)" stroke-width="1"/>')}</svg>`;
+}
+const picLabel = name => String(name || "").replace(/^Picture\./, "") || "(none)";
 const f = (key, label, kind, def, show, extra) => ({key, label, kind, def, show, ...extra});
 const has = (v, ...xs) => xs.includes(v);
 
@@ -472,7 +565,7 @@ const ASSIGN = [
   f("column", "Column", "expr", "1", r => r.type === "Variable Array (2D)"),
   f("attribute", "Attribute Name", "ref:attributes", "Attribute 1", r => r.type === "Attribute"),
   f("entity_type", "Entity Type", "ref:entities", "Entity 1", r => r.type === "Entity Type"),
-  f("entity_picture", "Entity Picture", "ref:pictures", "Picture.Report", r => r.type === "Entity Picture"),
+  f("entity_picture", "Entity Picture", "picture", "Picture.Report", r => r.type === "Entity Picture"),
   f("other", "Other", "expr", "J", r => r.type === "Other"),
   f("value", "New Value", "expr", "1", r => !has(r.type, "Entity Type", "Entity Picture")),
 ];
@@ -640,7 +733,7 @@ function subtitle(n) {
 // ======================= data modules =======================
 const T = {
   entities: {g: "Basic Process", label: "Entity", hint: "Entity types. The animation draws the picture, in the override colour if one is set.", fields: [
-    f("initial_picture", "Initial Picture", Object.keys(PICTURES), "Picture.Report"),
+    f("initial_picture", "Initial Picture", "picture", "Picture.Report"),
     f("color", "Animation colour (overrides picture)", "color", ""),
     f("holding_cost", "Holding Cost / Hour", "expr", "0.0"),
     f("initial_va", "Initial VA Cost", "expr", "0.0"), f("initial_nva", "Initial NVA Cost", "expr", "0.0"),
@@ -1185,6 +1278,7 @@ addEventListener("keydown", ev => {
   if (ev.key === "F10") { ev.preventDefault(); stepRun(); return; }
   if (!$("setupdlg").hidden) { if (ev.key === "Escape") closeSetup(false); return; }
   if (!$("scheddlg").hidden) { if (ev.key === "Escape") closeSchedEditor(false); return; }
+  if (!$("picdlg").hidden) { if (ev.key === "Escape") closePicker(); return; }
   if (!$("rowsdlg").hidden) { if (ev.key === "Escape") $("rowsclose").click(); return; }
   if ((ev.key === "<" || ev.key === ">") && anim && !typing) { speedBase *= ev.key === ">" ? 1.25 : 0.8; $("aspeed").oninput(); return; }
   if (ev.key === "Escape" && anim && anim.playing) { pauseRun(); return; }
@@ -1212,6 +1306,14 @@ function refOptions(ref) {
 }
 function input(parent, kind, value, onChange, opts = {}) {
   let e;
+  if (kind === "picture") {   // a button showing the picture; it opens the picture gallery
+    e = document.createElement("button"); e.type = "button"; e.className = "picbtn";
+    const show = v => { e.value = v; e.innerHTML = picIcon(v, 20) + `<span>${esc(picLabel(v))}</span>`; e.title = "Choose a picture: " + picLabel(v); };
+    show(value || "Picture.Report");
+    e.onclick = () => openPicker(e.value, v => { show(v); onChange(v); });
+    parent.appendChild(e);
+    return e;
+  }
   if (Array.isArray(kind)) {
     e = document.createElement("select");
     const opts2 = kind.includes(value ?? "") || value == null ? kind : [value, ...kind];
@@ -1257,7 +1359,7 @@ function renderFields(parent, obj, fields, opts = {}) {
     if (fd.show && !fd.show(obj, opts.parent)) continue;
     if (fd.kind === "repeat") { renderRepeat(parent, obj, fd, opts); continue; }
     const kind = typeof fd.kind === "function" ? fd.kind(obj) : fd.kind;
-    const structural = Array.isArray(kind) || kind === "check";
+    const structural = Array.isArray(kind) || kind === "check" || kind === "picture";
     const ph = fd.placeholder ? fd.placeholder(opts.root || obj) : (fd.def === "@units" || typeof fd.def === "boolean" ? "" : String(fd.def ?? ""));
     const cell = document.createElement("div");
     cell.className = "fld" + (kind === "multi" || WIDE.has(fd.key) ? " wide" : "");
@@ -1560,7 +1662,7 @@ function sheetCell(td, obj, fd, aria, owner) {
     b.setAttribute("aria-label", aria); b.onclick = () => openRowsDlg(obj, fd, aria);
     td.appendChild(b); return;
   }
-  const structural = Array.isArray(kind) || kind === "check";
+  const structural = Array.isArray(kind) || kind === "check" || kind === "picture";
   const e = input(td, kind, kind === "color" ? (obj[fd.key] || (PICTURES[obj.initial_picture] || ["#f59e0b"])[0]) : obj[fd.key],
                   v => editProp(() => { obj[fd.key] = v; }, structural),
                   {placeholder: fd.placeholder ? fd.placeholder(obj) : (fd.def === "@units" || typeof fd.def === "boolean" ? "" : String(fd.def ?? ""))});
@@ -1617,6 +1719,33 @@ function renderSheet() {
   pane.appendChild(add);
   $("panes").scrollTop = keep;
 }
+// Picture gallery: every picture, grouped, with a search box.
+let picPick = null;
+function openPicker(current, done) {
+  picPick = {current, done, back: document.activeElement};
+  $("picsearch").value = ""; $("picdlg").hidden = false; renderPicker();
+  ($("picbody").querySelector("button.on") || $("picsearch")).focus();
+}
+function closePicker() { $("picdlg").hidden = true; const b = picPick && picPick.back; picPick = null; if (b && b.focus) b.focus(); }
+function renderPicker() {
+  const body = $("picbody"), q = $("picsearch").value.trim().toLowerCase(); body.innerHTML = "";
+  for (const [grp, pics] of Object.entries(PIC_GROUPS)) {
+    const names = Object.keys(pics).filter(n => !q || picLabel(n).toLowerCase().includes(q) || grp.toLowerCase().includes(q));
+    if (!names.length) continue;
+    const h = document.createElement("div"); h.className = "picgrp"; h.textContent = grp; body.appendChild(h);
+    const grid = document.createElement("div"); grid.className = "picgrid"; body.appendChild(grid);
+    for (const n of names) {
+      const b = document.createElement("button"); b.type = "button"; b.className = n === picPick.current ? "on" : "";
+      b.innerHTML = picIcon(n, 30) + `<span>${esc(picLabel(n))}</span>`; b.title = n; b.setAttribute("aria-label", picLabel(n));
+      b.onclick = () => { const d = picPick.done; closePicker(); d(n); };
+      grid.appendChild(b);
+    }
+  }
+  if (!body.children.length) body.innerHTML = '<p class="hint">No picture matches.</p>';
+}
+$("picsearch").addEventListener("input", renderPicker);
+$("piccancel").onclick = closePicker;
+$("picdlg").addEventListener("pointerdown", ev => { if (ev.target === $("picdlg")) closePicker(); });
 function openRowsDlg(obj, fd, title) { rowsDlg = {obj, fd, title}; $("rowsdlg").hidden = false; renderRowsDlg(); }
 function renderRowsDlg() {
   if (!rowsDlg) return;
@@ -2264,9 +2393,9 @@ function tick(now) {   // keeps drawing while paused so stepped entities glide i
 function entityLook(type, pic) {
   const et = model.data.entities[type] || {};
   const init = et.initial_picture || "Picture.Report";
-  const [pc, shape] = PICTURES[pic || init] || PICTURES[init] || ["var(--entity)", "circle"];
-  if (pic && pic !== init) return [pc, shape];
-  return [et.color || pc, shape];
+  const [pc, shape, glyph] = PICTURES[pic || init] || PICTURES[init] || ["var(--entity)", "circle"];
+  const tint = (!pic || pic === init) && et.color ? et.color : "";
+  return shape === "emoji" ? [tint, shape, glyph] : [tint || pc, shape];
 }
 let tx0, ty0;
 function draw() {
@@ -2300,18 +2429,24 @@ function draw() {
     ids.slice(0, 30).forEach((id, k) => {
       keep.add(id);
       const tx = n.x + 10 + (k % 15) * 8.5, ty = n.y + H + 8 + Math.floor(k / 15) * 8.5;
-      const [fill, shape] = entityLook(anim.etype.get(id), anim.epic.get(id));
+      const [fill, shape, glyph] = entityLook(anim.etype.get(id), anim.epic.get(id));
+      const look = fill + shape + (glyph || "");
       let c = anim.dots.get(id);
-      if (c && c.dataset.look !== fill + shape) { c.remove(); anim.dots.delete(id); tx0 = +c.dataset.x; ty0 = +c.dataset.y; c = null; }
+      if (c && c.dataset.look !== look) { c.remove(); anim.dots.delete(id); tx0 = +c.dataset.x; ty0 = +c.dataset.y; c = null; }
       if (!c) {
-        c = el(shape === "circle" ? "circle" : "path", {class: "ent", fill}, g);
-        c.dataset.x = tx0 ?? tx; c.dataset.y = ty0 ?? ty; c.dataset.look = fill + shape; c.dataset.shape = shape; anim.dots.set(id, c);
+        if (shape === "emoji") {   // the glyph, on a disc of the override colour when there is one
+          c = el("g", {class: "ent emo"}, g);
+          if (fill) el("circle", {r: 5, fill}, c);
+          el("text", {"text-anchor": "middle", "dominant-baseline": "central", "font-size": 9}, c).textContent = glyph;
+        } else c = el(shape === "circle" ? "circle" : "path", {class: "ent", fill}, g);
+        c.dataset.x = tx0 ?? tx; c.dataset.y = ty0 ?? ty; c.dataset.look = look; c.dataset.shape = shape; anim.dots.set(id, c);
       }
       tx0 = ty0 = undefined;
       const x = +c.dataset.x, y = +c.dataset.y, nx = x + (tx - x) * 0.25, ny = y + (ty - y) * 0.25;
       c.dataset.x = nx; c.dataset.y = ny;
       if (c.dataset.shape === "circle") { c.setAttribute("cx", nx); c.setAttribute("cy", ny); c.setAttribute("r", 3.5); }
-      else c.setAttribute("d", c.dataset.shape === "rect" ? `M${nx - 3.2},${ny - 3.2}h6.4v6.4h-6.4z` : `M${nx},${ny - 4.2}L${nx + 4.2},${ny}L${nx},${ny + 4.2}L${nx - 4.2},${ny}z`);
+      else if (c.dataset.shape === "emoji") c.setAttribute("transform", `translate(${nx.toFixed(2)},${ny.toFixed(2)})`);
+      else c.setAttribute("d", shapePath(c.dataset.shape, nx, ny, 4.2));
     });
   }
   for (const [id, c] of anim.dots) if (!keep.has(id)) { c.remove(); anim.dots.delete(id); }
