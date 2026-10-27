@@ -4,7 +4,9 @@
 //  - code mismatch (the report was edited after it was made) or not a report at all;
 //  - the same Model ID handed in under different NIMs (one model file, several students);
 //  - the same module layout (positions and names) under different NIMs and Model IDs;
-//  - other NIMs in the model's author history; several reports from one NIM.
+//  - other NIMs in the model's author history; several reports from one NIM;
+//  - modules (by their hidden marks) shared with another NIM's model, and a history that
+//    was edited or deleted outside the app.
 // The table exports to CSV for the grade sheet; a row opens the single-report check.
 (function () {
   const dlg = document.createElement("div");
@@ -103,11 +105,15 @@
     const p = r.p, me = p.identity || {}, meta = (p.model && p.model.meta) || {};
     return {file, html, ok: r.ok, report: true, name: me.name || "", nim: String(me.nim || ""), kelas: me.kelas || "", created: p.created || "",
             model: (p.model && p.model.name) || "", mid: meta.id || "", code: r.code, layout: layoutKey(p.model),
-            authors: (meta.authors || []).map(a => String(a.nim || "")), reps: ((p.model || {}).run || {}).replications ?? ""};
+            authors: (meta.authors || []).map(a => String(a.nim || "")), marks: moduleMarks(p.model), hist: historyFlags(meta), reps: ((p.model || {}).run || {}).replications ?? ""};
   }
   function analyse() {
     const group = key => { const m = new Map(); for (const it of items) if (it.report && key(it)) (m.get(key(it)) || m.set(key(it), []).get(key(it))).push(it); return m; };
     const byMid = group(it => it.mid), byLayout = group(it => it.layout), byNim = group(it => it.nim);
+    const byMark = new Map();
+    for (const it of items) if (it.report) for (const k of new Set(it.marks)) (byMark.get(k) || byMark.set(k, []).get(k)).push(it);
+    // a mark in many students' models came from a model the lecturer handed out, not from copying
+    const template = Math.max(5, Math.ceil(new Set(items.filter(x => x.report).map(x => x.nim)).size * 0.3));
     for (const it of items) {
       it.flags = []; it.level = "";
       if (!it.report) { it.flags.push(it.why); it.level = "bad"; continue; }
@@ -120,6 +126,16 @@
       const hist = [...new Set(it.authors.filter(n => n && n !== it.nim))];
       if (hist.length) it.flags.push(`Riwayat penulis memuat NIM ${hist.join(", ")}`);
       if ((byNim.get(it.nim) || []).length > 1) it.flags.push(`${byNim.get(it.nim).length} laporan dari NIM ini`);
+      // modules taken from another student's model: at least 3 marks, and half of this model's modules
+      const shared = new Map();
+      for (const k of new Set(it.marks)) {
+        const owners = new Set((byMark.get(k) || []).map(x => x.nim));
+        if (owners.size >= template) continue;   // a starting model handed out to the class
+        for (const n of owners) if (n !== it.nim) shared.set(n, (shared.get(n) || 0) + 1);
+      }
+      const from = [...shared].filter(([, c]) => c >= 3 && c >= it.marks.length / 2).map(([n, c]) => `${n} (${c} dari ${it.marks.length})`);
+      if (from.length) { it.flags.push(`Modul sama dengan model NIM ${from.join(", ")}`); it.level = "bad"; }
+      if (it.hist.length) { it.flags.push(...it.hist); if (it.hist.some(t => /diubah|tidak sah/.test(t))) it.level = "bad"; }
       if (!it.level && it.flags.length) it.level = "warn";
     }
   }

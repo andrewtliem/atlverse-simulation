@@ -3,6 +3,9 @@
 //  - Identitas mahasiswa (name, NIM, class) is kept in this browser and stamped into the
 //    model (model.meta) on Save and Export JSON: the model keeps an ID from its first save
 //    and a list of everyone who saved it, so a copied file still names its first author.
+//    The history is sealed, so editing it by hand is noticed, and every module carries a
+//    random mark that travels with it through Import and copy/paste, so modules taken from
+//    someone else's model are recognised even when the history was deleted from the file.
 //  - File → Laporan: a self-contained HTML report (or print it to PDF) with the student's
 //    watermark on every page and a verification code over its contents.
 //  - File → Periksa laporan: the lecturer opens a report file to check its code and history.
@@ -18,9 +21,27 @@ function atlHash(str) {   // cyrb53: a short, stable fingerprint (not a security
 }
 const atlCode = s => { const h = atlHash("atlverse-simulation|" + s); return `ATL-${h.slice(0, 4)}-${h.slice(4, 8)}-${h.slice(8, 12)}`; };
 
+const metaSeal = meta => atlHash("atl-meta|" + JSON.stringify([meta.id, meta.created, meta.authors || [], !!meta.edited, !!meta.lost]));
+function eachModule(m, fn) { const walk = g => { for (const n of (g && g.nodes) || []) { fn(n); if (n.sub) walk(n.sub); } }; walk(m); }
+function moduleMarks(m) { const a = []; eachModule(m, n => { if (n.mk) a.push(n.mk); }); return a; }
+function markModules(m) {   // a random mark per module; a duplicate inside one model gets a new one
+  const seen = new Set();
+  eachModule(m, n => { if (!n.mk || seen.has(n.mk)) n.mk = "k" + atlHash(Math.random() + "|" + performance.now()).slice(0, 10); seen.add(n.mk); });
+}
+// Problems with a model's history, for the report checks.
+function historyFlags(meta) {
+  const f = [];
+  if (meta && meta.edited) f.push("Riwayat penulis model pernah diubah manual (di luar aplikasi)");
+  if (meta && meta.lost) f.push("Model dimulai dari modul yang diimpor atau ditempel tanpa riwayatnya");
+  if (meta && meta.seal && meta.seal !== metaSeal(meta)) f.push("Riwayat penulis di laporan ini tidak sah");
+  return f;
+}
 function stampModel(m) {   // who worked on this model; returns m
   const me = atlIdentity(), now = new Date().toISOString();
-  m.meta ||= {};
+  const hadMarks = moduleMarks(m).length > 0;
+  if (!m.meta) m.meta = hadMarks ? {lost: true} : {};   // marked modules without a history: it was removed
+  else if (m.meta.seal ? m.meta.seal !== metaSeal(m.meta) : m.meta.v >= 2) m.meta.edited = true;
+  markModules(m);
   m.meta.id ||= "M-" + atlHash(now + Math.random()).slice(0, 10);
   m.meta.created ||= now;
   if (me && me.nim) {
@@ -28,6 +49,7 @@ function stampModel(m) {   // who worked on this model; returns m
     if (last && last.nim === me.nim) { last.name = me.name; last.kelas = me.kelas; last.last = now; }
     else a.push({name: me.name, nim: me.nim, kelas: me.kelas || "", first: now, last: now});
   }
+  m.meta.v = 2; m.meta.seal = metaSeal(m.meta);
   return m;
 }
 
@@ -244,7 +266,8 @@ ${print ? "<script>addEventListener('load', () => setTimeout(() => print(), 300)
 }
 function exportReport(print) {
   if (!lastResults) { toast("Jalankan model sampai selesai dulu — laporan memakai hasil run terakhir"); return; }
-  if (lastResults._model && JSON.stringify(lastResults._model.nodes) !== JSON.stringify(model.nodes)) toast("Catatan: model sudah diubah sejak run terakhir — jalankan ulang agar laporan sesuai");
+  const noMarks = (k, v) => k === "mk" ? undefined : v;   // marks added on save do not change the model
+  if (lastResults._model && JSON.stringify(lastResults._model.nodes, noMarks) !== JSON.stringify(model.nodes, noMarks)) toast("Catatan: model sudah diubah sejak run terakhir — jalankan ulang agar laporan sesuai");
   const html = buildReport(print), me = atlIdentity();
   const file = `Laporan_${(model.name || "model").replace(/[^\w-]+/g, "_")}_${me.nim}.html`;
   if (print) {
@@ -284,6 +307,7 @@ function showVerify(name, html) {
     <tr><th>Kode</th><td>${esc(r.code)}${r.ok ? "" : ` (dihitung ulang: ${esc(r.again)})`}</td></tr>
     <tr><th>Riwayat penulis</th><td>${a.map(x => `${esc(x.name)} (${esc(x.nim)})`).join(" → ") || "–"}</td></tr></table>
     ${others.length ? `<p class="warn">⚠ Model juga disimpan oleh NIM lain: ${others.map(x => esc(x.nim)).join(", ")}. Bisa jadi kerja kelompok, atau file disalin.</p>` : ""}
+    ${historyFlags(p.model.meta).map(t => `<p class="warn">⚠ ${esc(t)}.</p>`).join("")}
     <p class="hint">Dua laporan dengan Model ID yang sama berasal dari file model yang sama. Kode verifikasi mendeteksi perubahan isi laporan, tetapi bukan jaminan kriptografis.</p>`;
   $("vopen").onclick = async () => { vDlg.hidden = true; const prev = snapshot(); setModel(await upgraded(p.model)); undo = [prev]; updateButtons(); markDirty(); requestAnimationFrame(fit); toast("Model dari laporan dibuka — Ctrl+Z kembali"); };
   vDlg.hidden = false;
