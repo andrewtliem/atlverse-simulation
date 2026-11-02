@@ -69,7 +69,7 @@ Paste observed data, see the histogram, fit UNIF, TRIA, NORM, EXPO, ERLA, GAMM, 
 <tr>
 <td width="50%" valign="top">
 <b>Student reports</b><br>
-Students enter their name and student number once; <i>File → Laporan</i> produces an HTML/PDF report with the model diagram, Run Setup, results and scenarios, watermarked on every page with a verification code. <i>File → Periksa laporan</i> lets the lecturer check that a report was not edited and who saved the model.<br><br>
+Students enter their name and student number once; <i>File → Laporan</i> produces an HTML/PDF report with the model diagram, Run Setup, results and scenarios, watermarked on every page with a verification code. <i>File → Periksa laporan</i> lets the lecturer check that a report was not edited and who saved the model. <i>File → Hasil ke Excel</i> downloads the results as a workbook, with a history of every run and its parameters for comparing changes.<br><br>
 <img src="docs/screenshots/report.png" alt="Watermarked student report">
 </td>
 <td width="50%" valign="top">
@@ -188,7 +188,7 @@ distribution by its mean.
 | `simcore/continuous.py` | levels, rates, CSTATS, DETECT |
 | `simcore/rng.py`, `stats.py` | random numbers and distributions, tallies, half widths |
 | `simcore/loader.py` | YAML format and Arena-style modules (process, decide, batch, …) |
-| `simcore/web/` | editor: `api.py` (shared by server and browser), `server.py`, `build.py` (static site), `static/` (page, `worker.js`, `browser.js`, `learn.js`, `report.js`, `scenarios.js`, `analyzer.js`, `plots.js`) |
+| `simcore/web/` | editor: `api.py` (shared by server and browser), `server.py`, `build.py` (static site), `static/` (page, `worker.js`, `browser.js`, `learn.js`, `report.js`, `export.js`, `scenarios.js`, `analyzer.js`, `plots.js`) |
 | `branding/` | logo (SVG and PNG) |
 
 ## Tests
@@ -219,6 +219,8 @@ berjalan di laptop masing-masing. Fitur untuk kelas:
   Little, half width).
 - **Identitas mahasiswa** (👤) dan **File → Laporan HTML/PDF** dengan watermark nama, NIM dan
   kode verifikasi; dosen memeriksa keaslian laporan lewat **File → Periksa laporan**.
+- **File → Hasil ke Excel (.xlsx)**: ringkasan, nilai per replikasi dan **riwayat run** (satu baris per
+  run dengan parameter dan hasilnya), untuk membandingkan perubahan parameter tanpa copy-paste.
 - **Expression Builder** (tombol **ƒx** atau klik kanan di kolom expression): pilih distribusi, variable,
   resource, antrean atau fungsi dari daftar; `DISC`/`CONT` cukup diisi tabel nilai dan peluang (%).
 - **Tools → Scenarios** untuk membandingkan skenario, **Tools → Input Analyzer** untuk mencari

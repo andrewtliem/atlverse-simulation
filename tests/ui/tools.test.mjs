@@ -145,5 +145,19 @@ await page.waitForFunction(() => !!lastResults, null, { timeout: 60000 });
 check("Go after the edit runs the new Capacity", await page.evaluate(() => lastResults.replications[0].resources.Teller.number_scheduled) === 2);
 await page.click("#aexit");
 
+// Excel export: summary, per replication and every run of the model, so changed parameters compare row by row
+await page.evaluate(() => { localStorage.removeItem(runLogKey()); model.run.batch_run = true; model.run.replications = "3"; model.data.resources.Teller.capacity = "1"; });
+await page.click("#brun"); await page.waitForFunction(() => !!lastResults && lastResults.replications.length === 3, null, { timeout: 60000 });
+await page.evaluate(() => { lastResults = null; model.data.resources.Teller.capacity = "2"; });
+await page.click("#brun"); await page.waitForFunction(() => !!lastResults, null, { timeout: 60000 });
+check("Summary has an Excel button", await page.isVisible("#sum-top .xlbtn"));
+const [xl] = await Promise.all([page.waitForEvent("download"), menu("file", "#mi-xlsx")]);
+const xfile = `${out}/${xl.suggestedFilename()}`; await xl.saveAs(xfile);
+check("Excel file named after model and NIM", /^Hasil_Bank_230100\d_\d{4}-\d\d-\d\d_\d{4}\.xlsx$/.test(xl.suggestedFilename()), xl.suggestedFilename());
+const zipText = fs.readFileSync(xfile).toString("latin1");
+check("workbook has Ringkasan, Per replikasi and Riwayat run", ["Ringkasan", "Per replikasi", "Riwayat run"].every(n => zipText.includes(`name="${n}"`)) && zipText.includes("Teller Service.Queue"));
+check("run log keeps both runs with their capacity", await page.evaluate(() => runLog().map(e => Object.fromEntries(e.params)["Teller · Capacity"]).join(",")) === "1,2");
+console.log("XLSX " + xfile);
+
 check("no console errors", errors.length === 0, errors.join(" | "));
 await browser.close();

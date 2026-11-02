@@ -2211,8 +2211,10 @@ $("bff").onclick = fastForward;
 $("bend").onclick = endRun;
 $("rpend").onclick = endRun;
 const fmt = v => typeof v === "number" ? (Math.abs(v) >= 1e4 ? v.toFixed(0) : +v.toFixed(4)) : (v ?? "–");
+let summaryData = [];   // the Summary's tables with their raw values, for the Excel export (export.js)
 function table(parent, title, cols, rows) {
   if (!rows.length) return;
+  if (parent.id === "p-summary") summaryData.push({title, cols, rows});
   const h = document.createElement("h2"); h.textContent = title; parent.appendChild(h);
   const t = document.createElement("table"); t.className = "res";
   t.innerHTML = "<tr>" + cols.map(c => `<th>${typeof termHtml === "function" ? termHtml(c) : esc(c)}</th>`).join("") + "</tr>" + rows.map(r => "<tr>" + r.map(c => `<td>${esc(fmt(c))}</td>`).join("") + "</tr>").join("");
@@ -2220,12 +2222,12 @@ function table(parent, title, cols, rows) {
 }
 function renderSummary(res) {
   // Arena's Category Overview: Entity, Process, Queue, Resource and User Specified sections
-  const p = $("p-summary"); p.innerHTML = "";
+  const p = $("p-summary"); p.innerHTML = ""; summaryData = [];
   const reps = res.replications, r = reps[0], n = reps.length, run = model.run;
   const avg = (f) => { const v = reps.map(f).filter(x => typeof x === "number"); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : "–"; };
   const tav = (k, what = "average") => avg(x => (x.tallies[k] || {})[what]);
   const costing = run.stats_costing !== false;
-  const sec = (id, title) => { const h = document.createElement("h2"); h.id = id; h.textContent = title; h.style.fontSize = "13px"; h.style.color = "var(--ink)"; p.appendChild(h); };
+  const sec = (id, title) => { summaryData.push({section: title}); const h = document.createElement("h2"); h.id = id; h.textContent = title; h.style.fontSize = "13px"; h.style.color = "var(--ink)"; p.appendChild(h); };
   const top = document.createElement("div"); top.id = "sum-top"; p.appendChild(top);
   top.innerHTML = `<b>${esc(model.name)}</b> <span class="hint">· Replications: ${n} · Time units: ${esc(model.time_units)}${run.analyst ? " · Analyst: " + esc(run.analyst) : ""}${n > 1 ? " · values are averages over the replications" : ""}</span>`;
 
@@ -2472,5 +2474,6 @@ addEventListener("beforeunload", () => { try { localStorage.setItem("simcore.aut
 <script src="exprbuilder.js"></script>
 <script src="present.js"></script>
 <script src="bulk.js"></script>
+<script src="export.js"></script>
 </body>
 </html>

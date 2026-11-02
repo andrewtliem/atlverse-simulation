@@ -218,6 +218,9 @@ const GLOSS = [
   ["report_code", "Laporan & kode verifikasi", "Alat", ["Kode verifikasi", "Laporan", "Watermark", "Identitas"],
    `<b>File → Laporan HTML / PDF</b> membuat laporan berisi identitas (Nama, NIM, Kelas), diagram model, Run Setup, hasil, dan perbandingan skenario. Setiap halaman diberi <b>watermark</b> nama, NIM dan <b>kode verifikasi</b>.
     Kode dihitung dari seluruh isi file: jika laporan diubah setelah dibuat, <b>File → Periksa laporan</b> akan menyatakan kodenya tidak cocok. Model juga mencatat <b>Model ID</b> dan riwayat NIM yang pernah menyimpannya. Kumpulkan file laporan apa adanya (jangan disimpan ulang dari browser).`],
+  ["excel_export", "Hasil ke Excel", "Alat", ["Excel", "Unduh hasil", "xlsx", "Riwayat run", "Bandingkan parameter"],
+   `<b>File → Hasil ke Excel (.xlsx)</b> (atau tombol <b>⬇ Excel</b> di Summary) mengunduh hasil run terakhir tanpa perlu copy-paste: sheet <b>Ringkasan</b> (parameter dan semua tabel Category Overview), <b>Per replikasi</b> (nilai tiap replikasi, rata-rata, half width 95%), dan <b>Riwayat run</b>.
+    Riwayat run mencatat setiap run model ini di browser ini, satu baris per run dengan parameternya (Capacity, Initial Value, Time Between Arrivals, replikasi, panjang run) dan hasilnya. Ubah parameter, Go lagi, lalu unduh: semua run berjejer untuk dibandingkan, dan parameter yang berubah ditandai tebal. <b>File → Kosongkan riwayat run</b> untuk mulai dari awal. Bila Scenarios sudah dijalankan, hasilnya ikut di sheet <b>Skenario</b>.`],
 ];
 const GLOSS_BY_ID = Object.fromEntries(GLOSS.map(g => [g[0], g]));
 const ALIAS = {};
