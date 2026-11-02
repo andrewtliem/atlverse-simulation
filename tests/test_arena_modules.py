@@ -316,6 +316,35 @@ class TestDataModules(unittest.TestCase):
         self.assertNotIn("process 2.TotalTimePerEntity", r["tallies"])
 
 
+
+class TestArrivalScheduleEndsAtZero(unittest.TestCase):
+    """An Arrival schedule whose last row is 0 with a blank duration must end arrivals, not hang."""
+
+    def _graph(self, rows, end_logic=None):
+        sched = {"type": "Arrival", "units": "Hours", "durations": rows}
+        if end_logic:
+            sched["end_logic"] = end_logic
+        return graph([N(1, "create", type="Schedule", schedule="A", entity_type="P"),
+                      N(2, "record", type="Count", counter_name="n"), N(3, "dispose")],
+                     [L(1, 2), L(2, 3)], {"schedules": {"A": sched}}, length=600)
+
+    def test_blank_last_zero_stops_arrivals(self):
+        r = run(self._graph([{"value": "30", "duration": "2"}, {"value": "0", "duration": ""}]))
+        self.assertGreater(r["counters"]["n"], 30)   # about 60 in the first two hours
+        self.assertLess(r["counters"]["n"], 100)
+
+    def test_remain_at_zero_stops_arrivals(self):
+        r = run(self._graph([{"value": "30", "duration": "2"}, {"value": "0", "duration": "1"}],
+                            end_logic="Remain at Arrival Rate"))
+        self.assertLess(r["counters"]["n"], 100)
+
+    def test_arrivals_after_zero_gap_still_happen(self):
+        # 0 in the middle of a repeating schedule is not the end: arrivals resume in hour 3
+        r = run(self._graph([{"value": "30", "duration": "1"}, {"value": "0", "duration": "1"},
+                             {"value": "30", "duration": "8"}]))
+        self.assertGreater(r["counters"]["n"], 150)
+
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -53,8 +53,18 @@ class Schedule:
         s = sim.model.streams[rng.DEFAULT_STREAM]
         t = sim.now
         per_unit = 1 / sim.model.to_hours(1.0)
+        # A non-repeating schedule keeps its last value forever (a blank last duration, or
+        # "Remain at"). If that value is 0 no arrival can ever be accepted, so stop there
+        # instead of thinning forever.
+        dead_from = math.inf
+        if not self.repeat and self.segments[-1][0] * self.scale <= 0:
+            dead_from = sum(d for _, d in self.segments[:-1])
         while True:
+            if t >= dead_from:
+                return math.inf
             t += -math.log(s.u()) / (rmax / per_unit)
+            if t >= dead_from:
+                return math.inf
             if s.u() <= self.value_at(t) / rmax:
                 return t - sim.now
 
